@@ -1,0 +1,5 @@
+{
+  "name": "imgui",
+  "version": "1.92.2",
+  "build": { "srcDir": "src", "includeDir": "include" }
+}

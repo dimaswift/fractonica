@@ -1,0 +1,6 @@
+{
+  "name": "fractonica-mega2560display",
+  "version": "0.0.1",
+  "build": { "srcDir": "src", "includeDir": "include" },
+  "frameworks": ["arduino"]
+}

@@ -1,10 +1,5 @@
-#include <Arduino.h>
-
-void setup() {
-    Serial.begin(9600);
-    Serial.println("fractonica says hello");
-}
-
-void loop() {
-
-}
+#if defined(EMBEDDED)
+#include <Mega2560Boot.h>
+#elif defined(DESKTOP)
+#include <DesktopBoot.h>
+#endif
