@@ -1,12 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(fractonica LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-if(NOT EMSCRIPTEN)
-    message(FATAL_ERROR "This CMakeLists.txt is WASM-only. Configure with emcmake/em++.")
-endif()
 
 # -----------------------
 # Paths
@@ -31,8 +27,25 @@ target_include_directories(core PUBLIC
 )
 
 # -----------------------
-# imgui library (with emscripten-friendly backend selection)
-# Prefer imgui_impl_glfw + imgui_impl_opengl3 for WebGL via Emscripten
+# GLFW setup (only for native builds)
+# -----------------------
+if(NOT EMSCRIPTEN)
+    include(FetchContent)
+    FetchContent_Declare(
+            glfw
+            GIT_REPOSITORY https://github.com/glfw/glfw.git
+            GIT_TAG 3.4
+    )
+
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable(glfw)
+endif()
+
+# -----------------------
+# imgui library
 # -----------------------
 add_library(imgui STATIC
         "${IMGUI_DIR}/src/imgui.cpp"
@@ -49,14 +62,15 @@ target_include_directories(imgui PUBLIC
         "${IMGUI_DIR}/include/backends"
 )
 
-# If you use OpenGL ES/WebGL you typically want this define for the OpenGL3 backend:
-# (pick the version string you use in your code; common: "#version 300 es")
-target_compile_definitions(imgui PUBLIC
-        IMGUI_IMPL_OPENGL_ES3=1
-)
-
-# imgui_impl_glfw needs GLFW headers. With Emscripten this is provided by the SDK,
-# so you usually don't add include dirs; just link flags later (-sUSE_GLFW=3).
+# Platform-specific imgui configuration
+if(EMSCRIPTEN)
+    target_compile_definitions(imgui PUBLIC
+            IMGUI_IMPL_OPENGL_ES3=1
+    )
+else()
+    # Native builds: link GLFW to imgui so it can find headers
+    target_link_libraries(imgui PUBLIC glfw)
+endif()
 
 # -----------------------
 # desktop library
@@ -73,7 +87,6 @@ target_include_directories(desktop PUBLIC
         "${DESKTOP_DIR}/include"
 )
 
-# Link core + imgui into desktop (PUBLIC so dependents inherit them)
 target_link_libraries(desktop PUBLIC core imgui)
 
 # -----------------------
@@ -85,28 +98,57 @@ add_executable(fractonica
 
 target_link_libraries(fractonica PRIVATE desktop)
 
-set_target_properties(fractonica PROPERTIES
-        OUTPUT_NAME "index"
-        SUFFIX ".html"
-)
-
 # -----------------------
-# Emscripten link options
+# Platform-specific configuration
 # -----------------------
-target_link_options(fractonica PRIVATE
-        "-sUSE_GLFW=3"
-        "-sUSE_WEBGL2=1"
-        "-sFULL_ES3=1"
-        "-sWASM=1"
-        "--shell-file" "${CMAKE_SOURCE_DIR}/web/index.html"
-        "--preload-file" "${CMAKE_SOURCE_DIR}/assets@assets"
-)
+if(EMSCRIPTEN)
+    # WASM build
+    set_target_properties(fractonica PROPERTIES
+            OUTPUT_NAME "index"
+            SUFFIX ".html"
+    )
 
-set(WEB_DIR "${CMAKE_SOURCE_DIR}/web/www")
+    target_link_options(fractonica PRIVATE
+            "-sUSE_GLFW=3"
+            "-sUSE_WEBGL2=1"
+            "-sFULL_ES3=1"
+            "-sWASM=1"
+            "--shell-file" "${CMAKE_SOURCE_DIR}/web/index.html"
+            "--preload-file" "${CMAKE_SOURCE_DIR}/assets@assets"
+    )
 
-add_custom_command(TARGET fractonica POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${WEB_DIR}"
-        "$<TARGET_FILE_DIR:fractonica>"
-        COMMENT "Copying web/ assets to build output"
-)
+    set(WEB_DIR "${CMAKE_SOURCE_DIR}/web/www")
+
+    add_custom_command(TARGET fractonica POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${WEB_DIR}"
+            "$<TARGET_FILE_DIR:fractonica>"
+            COMMENT "Copying web/ assets to build output"
+    )
+else()
+    # Native Windows/Desktop build
+    target_link_libraries(fractonica PRIVATE glfw)
+
+    # Windows-specific libraries
+    if(WIN32)
+        target_link_libraries(fractonica PRIVATE
+                opengl32
+                gdi32
+                user32
+                shell32
+        )
+    elseif(APPLE)
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(fractonica PRIVATE
+                OpenGL::GL
+                "-framework Cocoa"
+                "-framework IOKit"
+        )
+    else() # Linux
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(fractonica PRIVATE
+                OpenGL::GL
+                ${CMAKE_DL_LIBS}
+        )
+    endif()
+endif()

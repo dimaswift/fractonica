@@ -29,9 +29,9 @@ namespace Fractonica {
         uint32_t prevNewMoon = 0;
         uint32_t prevApogee = 0;
         uint32_t prevNodalAscending = 0;
-        uint32_t resolution;
-        uint8_t digits;
-        uint8_t base;
+        uint32_t resolution = 0;
+        uint8_t digits = 0;
+        uint8_t base = 0;
     public:
         explicit LunarTime(uint8_t digits = 4, uint8_t base = 8);
         [[nodiscard]] LunarEventInfo getEventInfo(uint32_t timestamp,  LunarEvent type) const;

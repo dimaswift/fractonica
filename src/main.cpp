@@ -16,7 +16,11 @@
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
   #else
-    #include <GL/gl.h>
+
+
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+#include <GL/gl.h>
   #endif
 
   #include <GLFW/glfw3.h>
@@ -43,7 +47,13 @@ namespace {
   #endif
   }
 
+void glfw_error_callback(int error, const char* description) {
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
   bool init_glfw_and_window() {
+
+    glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
       std::fprintf(stderr, "Failed to initialize GLFW\n");
       return false;
@@ -55,10 +65,12 @@ namespace {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   #else
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
   #endif
 
   #ifdef __EMSCRIPTEN__
@@ -158,6 +170,7 @@ namespace {
 } // namespace
 
 int main(int /*argc*/, char** /*argv*/) {
+
   if (!init_glfw_and_window()) {
     shutdown_everything();
     return 1;
