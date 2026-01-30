@@ -5,6 +5,8 @@
 #include <ImGuiInput.h>
 #include <LunarClockApp.h>
 
+#include "Utils.h"
+
 namespace Fractonica
 {
     SFMLDisplay::SFMLDisplay(uint16_t width, uint16_t height, uint16_t scale, ImGuiInput *input) : width(width),
@@ -54,9 +56,8 @@ namespace Fractonica
     {
     }
 
-    void SFMLDisplay::drawPixel(int16_t x, int16_t y, uint16_t color)
-    {
-        if(x < 0 || x >= width || y < 0 || y >= height) return;
+    void SFMLDisplay::drawPixel(uint16_t x, uint16_t y, uint32_t color) {
+        if(x >= width || y >= height) return;
         buffer.setPixel(sf::Vector2u(x, y), rgb565to888(color));
     }
 
@@ -88,6 +89,16 @@ namespace Fractonica
         }
     }
 
+    void SFMLDisplay::drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
+
+    }
+
+    static SFMLDisplay::ImGuiCallback guiCallback = nullptr;
+
+    void SFMLDisplay::addGuiCallback(ImGuiCallback callback) {
+        guiCallback = callback;
+    }
+
     void SFMLDisplay::update()
     {
         while (const std::optional event = window.pollEvent())
@@ -111,13 +122,9 @@ namespace Fractonica
 
         ImGui::SFML::Update(window, deltaClock.restart());
 
-        ImGui::Begin("Debug");
-
-        static int32_t posY = 240;
-
-        input->slider("Position Y", &posY, 0, 480, LunarClockApp::SLIDER_Y);
-
-        ImGui::End();
+        if (guiCallback) {
+            guiCallback();
+        }
 
         window.clear();
 
@@ -146,5 +153,13 @@ namespace Fractonica
 
     Vector2 SFMLDisplay::size() {
         return Vector2{.x = (int16_t)width, .y = (int16_t) height};
+    }
+
+    uint32_t SFMLDisplay::getColor(uint8_t r, uint8_t g, uint8_t b) const {
+        return Utils::Color(r, g, b);
+    }
+
+    uint32_t SFMLDisplay::getColorHSV(uint16_t h, uint8_t s, uint8_t v) const {
+        return Utils::ColorHSV(h, s, v);
     }
 };

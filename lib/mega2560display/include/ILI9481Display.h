@@ -46,11 +46,17 @@ namespace Fractonica {
 
         void drawBitmap(int16_t x, int16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap) override;
 
-        void drawPixel(int16_t x, int16_t y, uint16_t color) override;
+        void drawPixel(uint16_t x, uint16_t y, uint32_t color) override;
+
+        void drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) override;
 
         void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) override;
 
         bool begin() override;
+
+        uint32_t getColor(uint8_t r, uint8_t g, uint8_t b)  const override;
+
+        uint32_t getColorHSV(uint16_t h, uint8_t s, uint8_t v) const override;
     };
 }
 #endif

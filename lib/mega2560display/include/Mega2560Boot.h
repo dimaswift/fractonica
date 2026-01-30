@@ -1,20 +1,28 @@
-#ifndef MEGA2560BOOT_H
-#define MEGA2560BOOT_H
-
 #include <LunarClockApp.h>
 #include <ILI9481Display.h>
 #include <DS3231UnixClock.h>
 #include <ArduinoInput.h>
 
+#include "LunarGlyph.h"
+
 Fractonica::ArduinoInput input;
-Fractonica::IDisplay *display = new Fractonica::ILI9481Display();
-Fractonica::IUnixClock *unixClock = new Fractonica::DS3231UnixClock();
-Fractonica::LunarClockApp app(display, unixClock, &input);
+Fractonica::ILI9481Display display;
+Fractonica::DS3231UnixClock unixClock;
+Fractonica::LunarGlyph glyph;
+Fractonica::LunarClockApp app(&display, &unixClock, &input);
+
+uint32_t lastNewMoon = 0;
+uint32_t lastApogee = 0;
+uint32_t lastNode = 0;
 
 void setup()
 {
     Wire.begin();
     app.setup();
+
+    Serial.begin(9600);
+
+   // unixClock.setUnix(1769739420);
 }
 
 uint64_t prevMicros = 0;
@@ -25,6 +33,6 @@ void loop()
     const int32_t dt = m - prevMicros;
     app.loop(dt);
     prevMicros = m;
-}
 
-#endif
+    glyph.draw(&lastNewMoon, &lastNode, &lastApogee, unixClock.now(), 64, 24, 24, &display);
+}

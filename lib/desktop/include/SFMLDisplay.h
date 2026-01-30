@@ -22,6 +22,7 @@ namespace Fractonica
         ImGuiInput *input;
 
     public:
+        typedef void (*ImGuiCallback)();
         SFMLDisplay(uint16_t width, uint16_t height, uint16_t scale, ImGuiInput *input);
         ~SFMLDisplay();
         bool begin() override;
@@ -29,13 +30,19 @@ namespace Fractonica
         void log(const char *msg) override;
         void logError(const char *msg) override;
         void flush() override;
-        void drawPixel(int16_t x, int16_t y, uint16_t color) override;
+        void drawPixel(uint16_t x, uint16_t y, uint32_t color) override;
         void drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) override;
+        void drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) override;
         void drawBitmap(int16_t x, int16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap) override;
+
+        static void addGuiCallback(ImGuiCallback callback);
+
         void update() override;
         bool isOpen() override;
         void clear() override;
         Vector2 size() override;
+        uint32_t getColor(uint8_t r, uint8_t g, uint8_t b) const override;
+        uint32_t getColorHSV(uint16_t h, uint8_t s, uint8_t v) const override;
     };
 
 }

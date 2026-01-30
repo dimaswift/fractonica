@@ -62,6 +62,7 @@ class RTClib {
   public:
 		// Get date and time snapshot
     static DateTime now(TwoWire & _Wire = Wire);
+	static void setEpoch(time_t epoch, bool flag_localtime);
 };
 
 // Eric's original code is everything below this line

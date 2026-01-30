@@ -9,10 +9,11 @@ namespace Fractonica {
     class DS3231UnixClock : public IUnixClock
     {
     private:
-        RTClib myRTC;
-
+        RTClib rtcLib;
+        DS3231 rtc;
     public:
         int64_t now() override;
+        void setUnix(int32_t now);
     };
 }
 

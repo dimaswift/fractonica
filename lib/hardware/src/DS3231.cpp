@@ -174,6 +174,7 @@ bool isleapYear(const uint16_t y) {
   return (y % 100 || y % 400 == 0);
 }
 
+
 DateTime RTClib::now(TwoWire & _Wire) {
   _Wire.beginTransmission(CLOCK_ADDRESS);
   _Wire.write(0);	// This is the first register address (Seconds)
