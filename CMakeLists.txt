@@ -101,3 +101,12 @@ target_link_options(fractonica PRIVATE
         "--shell-file" "${CMAKE_SOURCE_DIR}/web/index.html"
         "--preload-file" "${CMAKE_SOURCE_DIR}/assets@assets"
 )
+
+set(WEB_DIR "${CMAKE_SOURCE_DIR}/web/www")
+
+add_custom_command(TARGET fractonica POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${WEB_DIR}"
+        "$<TARGET_FILE_DIR:fractonica>"
+        COMMENT "Copying web/ assets to build output"
+)

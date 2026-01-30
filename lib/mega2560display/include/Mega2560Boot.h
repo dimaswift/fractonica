@@ -1,5 +1,6 @@
+#pragma once
 #include <LunarClockApp.h>
-#include <ILI9481Display.h>
+#include "ILI9481Display.h"
 #include <DS3231UnixClock.h>
 #include <ArduinoInput.h>
 
