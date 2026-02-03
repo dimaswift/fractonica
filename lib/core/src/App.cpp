@@ -12,7 +12,7 @@ namespace Fractonica
 
     void App::staticInputHandler(const InputEvent &event, void *context)
     {
-        auto app = static_cast<App *>(context);
+        const auto app = static_cast<App *>(context);
         app->onInput(event);
     }
 

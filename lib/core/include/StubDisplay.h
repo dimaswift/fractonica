@@ -24,7 +24,7 @@ namespace Fractonica {
 
         void clear() override;
 
-        void drawPixel(int16_t x, int16_t y, uint16_t color) override;
+        void drawPixel(uint16_t x, uint16_t y, uint32_t color) override;
 
         void drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) override;
 
@@ -58,7 +58,7 @@ namespace Fractonica {
     inline void StubDisplay::clear() {
     }
 
-    inline void StubDisplay::drawPixel(int16_t x, int16_t y, uint16_t color) {
+    inline void StubDisplay::drawPixel(uint16_t x, uint16_t y, uint32_t color) {
     }
 
     inline void StubDisplay::drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) {
