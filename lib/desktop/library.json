@@ -1,5 +1,0 @@
-{
-  "name": "fractonica-desktop",
-  "version": "0.0.1",
-  "build": { "srcDir": "src", "includeDir": "include" }
-}
