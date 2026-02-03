@@ -4,7 +4,7 @@ add_definitions(-D${sokol_backend})
 # a dummy library with the system library dependencies
 macro(sokol_system_deps)
     if(SOKOL_USE_WGPU_DAWN)
-        fips_libs(webgpu_dawn)
+       fips_libs(webgpu_dawn)
     endif()
     if (FIPS_WINDOWS)
         if (SOKOL_USE_VULKAN)

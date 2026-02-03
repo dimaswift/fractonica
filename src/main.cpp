@@ -1,9 +1,3 @@
-
-//------------------------------------------------------------------------------
-//  imgui-dock-sapp.cpp
-//
-//  Converted to C++20
-//------------------------------------------------------------------------------
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_log.h"
@@ -12,11 +6,10 @@
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
 #include "vecmath/vecmath.h"
+using namespace vecmath;
 #include "compute.glsl.h"
 #include <array>
-#include <cmath>
 
-// Use constexpr instead of #define for type safety
 constexpr int MAX_PARTICLES = 512 * 1024;
 constexpr int NUM_PARTICLES_EMITTED_PER_FRAME = 10;
 
@@ -34,7 +27,6 @@ struct DisplayState {
     sg_pass_action pass_action;
 };
 
-// Encapsulate global state in a named struct
 struct AppState {
     int num_particles = 0;
     float ry = 0.0f;
@@ -60,13 +52,12 @@ static vs_params_t compute_vsparams(float frame_time) {
 }
 
 static void init() {
-    // setup sokol-gfx, sokol-time and sokol-imgui
+
     sg_desc desc{};
     desc.environment = sglue_environment();
     desc.logger.func = slog_func;
     sg_setup(&desc);
 
-    // Particle buffer
     sg_buffer_desc buf_desc{};
     buf_desc.size = MAX_PARTICLES * sizeof(particle_t);
     buf_desc.usage.vertex_buffer = true;
@@ -75,14 +66,12 @@ static void init() {
 
     state.buf = sg_make_buffer(&buf_desc);
 
-    // Compute resource view
     sg_view_desc particle_view_desc{};
     particle_view_desc.storage_buffer.buffer = state.buf;
     particle_view_desc.label = "particle-buffer-view";
 
     state.compute.sbuf_view = sg_make_view(&particle_view_desc);
 
-    // Update pipeline
     sg_pipeline_desc pipeline_desc{};
     pipeline_desc.compute = true;
     pipeline_desc.shader = sg_make_shader(update_shader_desc(sg_query_backend()));
@@ -91,7 +80,7 @@ static void init() {
     state.compute.pip = sg_make_pipeline(&pipeline_desc);
 
     const float r = 0.05f;
-    // Use std::array for C++ safety (optional, but good practice)
+
     const std::array<float, 42> vertices = {
         // positions            colors
         0.0f,   -r, 0.0f,       1.0f, 0.0f, 0.0f, 1.0f,
