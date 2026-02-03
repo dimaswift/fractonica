@@ -23,28 +23,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="db925e23-294b-4bb0-9a11-fcbd79539fdd" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/tools/pio_targets1.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/project.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/editor.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/fractonica.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vscode/c_cpp_properties.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vscode/extensions.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vscode/launch.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/core/include/LunarTime.h" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/include/LunarTime.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/core/src/LunarTime.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/src/LunarTime.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/desktop/include/FileSystemStorage.h" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/desktop/src/FileSystemStorage.cpp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/desktop/src/UnixClock.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/lib/desktop/src/UnixClock.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/platformio.ini" beforeDir="false" afterPath="$PROJECT_DIR$/platformio.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/pio_targets.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/pio_targets.py" afterDir="false" />
-    </list>
+    <list default="true" id="db925e23-294b-4bb0-9a11-fcbd79539fdd" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -71,33 +50,6 @@
     <setting file="file://$PROJECT_DIR$/lib/desktop/src/UnixClock.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/lib/imgui/src/backends/imgui_impl_glfw.cpp" root0="FORCE_HIGHLIGHTING" />
   </component>
-  <component name="PlatformioLocalSettings">
-    <option name="availableProjects">
-      <map>
-        <entry>
-          <key>
-            <ExternalProjectPojo>
-              <option name="name" value="Fractonica" />
-              <option name="path" value="$PROJECT_DIR$" />
-            </ExternalProjectPojo>
-          </key>
-          <value>
-            <list>
-              <ExternalProjectPojo>
-                <option name="name" value="fractonica" />
-                <option name="path" value="$PROJECT_DIR$" />
-              </ExternalProjectPojo>
-            </list>
-          </value>
-        </entry>
-      </map>
-    </option>
-    <option name="projectSyncType">
-      <map>
-        <entry key="$PROJECT_DIR$" value="RE_IMPORT" />
-      </map>
-    </option>
-  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
 }</component>
@@ -121,7 +73,7 @@
     "cidr.known.project.marker": "true",
     "com.jetbrains.cidr.cpp.cmake.workspace.CMakeCacheInvalidator.marker": "true",
     "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/Unity/fractonica/tools",
+    "last_opened_file_path": "C:/Users/Dimas/Downloads/cimgui-sokol-starterkit-main/cimgui-sokol-starterkit-main",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -133,6 +85,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Unity\fractonica\lib" />
       <recent name="C:\Unity\fractonica\tools" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
@@ -141,11 +94,6 @@
   </component>
   <component name="RunManager" selected="PlatformIO.PlatformIO">
     <configuration name="Unnamed" type="CMakeRunConfiguration" factoryName="Application" nameIsGenerated="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" EXPLICIT_BUILD_TARGET_NAME="all">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
