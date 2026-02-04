@@ -12,7 +12,9 @@ vscode_exclude_from_workspace:
     - fips-libmodplug
     - fips-ozz-animation
     - dcimgui
+    - cspice
 defines:
+    USE_SOKOL_APP: ON
     FIPS_EMSCRIPTEN_USE_WEBGPU: ON
     FIPS_EMSCRIPTEN_USE_WASM: ON
     FIPS_EMSCRIPTEN_USE_EMMALLOC: ON

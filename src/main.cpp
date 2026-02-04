@@ -7,15 +7,12 @@
 #include <chrono>
 #include <cstdio>
 #include "sokol_imgui.h"
-
-
-
 #include "vecmath/vecmath.h"
 using namespace vecmath;
 #include "compute.glsl.h"
 #include <array>
 
-#define USE_CSPICE
+//#define USE_CSPICE
 
 #if defined(USE_CSPICE)
 
