@@ -1,200 +1,312 @@
-#if defined(PLATFORM_ARDUINO)
+#include "sokol_app.h"
+#include "sokol_gfx.h"
+#include "sokol_log.h"
+#include "sokol_glue.h"
+#include "sokol_time.h"
+#include "imgui.h"
+#define SOKOL_IMGUI_IMPL
+#include <chrono>
+#include <cstdio>
 
-  #include <ArduinoBoot.h>
+#include "DesktopApp.h"
+#include "ImGuiInput.h"
+#include "ImGuiDisplay.h"
+#include "sokol_imgui.h"
+#include "UnixClock.h"
+#include "vecmath/vecmath.h"
+using namespace vecmath;
+#include "compute.glsl.h"
+#include <array>
+#include "LunarClockApp.h"
 
-#elif defined(PLATFORM_MEGA2560)
+//#define USE_CSPICE
 
-  #include <Mega2560Boot.h>
+#if defined(USE_CSPICE)
 
-#else  // Desktop / WASM
+#include "../libs/astro/moon.hpp"
+#include "../libs/astro/cspice_utils.hpp"
 
-  #ifdef __EMSCRIPTEN__
-    #include <emscripten.h>
-    #define GLFW_INCLUDE_ES3
-    #include <GLES3/gl3.h>
-  #elif defined(__APPLE__)
-    #define GL_SILENCE_DEPRECATION
-    #include <OpenGL/gl3.h>
-  #else
+#endif
 
 
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-#include <GL/gl.h>
-  #endif
+constexpr int MAX_PARTICLES = 512 * 1024;
+constexpr int NUM_PARTICLES_EMITTED_PER_FRAME = 10;
 
-  #include <GLFW/glfw3.h>
+using namespace vecmath;
 
-  #include <imgui.h>
-  #include "backends/imgui_impl_glfw.h"
-  #include "backends/imgui_impl_opengl3.h"
+struct ComputeState {
+    sg_view sbuf_view;
+    sg_pipeline pip;
+};
 
-  #include <cstdio>
-  #include <memory>
+struct DisplayState {
+    sg_buffer vbuf;
+    sg_buffer ibuf;
+    sg_pipeline pip;
+    sg_pass_action pass_action;
+};
 
-  #include "DesktopApp.h"   // from lib/desktop/include in your CMake
+struct AppState {
+    int num_particles = 0;
+    float ry = 0.0f;
+    sg_buffer buf{};
+    ComputeState compute{};
+    DisplayState display{};
+    bool show_test_window = true;
+    bool show_another_window = false;
+    bool show_error = false;
+    bool kernel_loaded = false;
+    char* error{};
+};
 
-namespace {
-  GLFWwindow* g_window = nullptr;
-  std::unique_ptr<Fractonica::DesktopApp> g_app;
-  ImVec4 g_clear_color{0.0f, 0.0f, 0.0f, 1.0f};
+static AppState state{};
+static Fractonica::DesktopApp app;
 
-  const char* glsl_version() {
-  #ifdef __EMSCRIPTEN__
-    return "#version 300 es";
-  #else
-    return "#version 150";
-  #endif
-  }
-
-void glfw_error_callback(int error, const char* description) {
-    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+static vs_params_t compute_vsparams(float frame_time) {
+    const mat44_t proj = mat44_perspective_fov_rh(vecmath_radians(60.0f), sapp_widthf()/sapp_heightf(), 0.01f, 50.0f);
+    const mat44_t view = mat44_look_at_rh(vec3(0.0f, 1.5f, 8.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+    const mat44_t view_proj = mat44_mul_mat44(view, proj);
+    
+    state.ry += 60.0f * frame_time;
+    
+    return vs_params_t {
+        .mvp = mat44_mul_mat44(mat44_rotation_y(vecmath_radians(state.ry)), view_proj),
+    };
 }
 
-  bool init_glfw_and_window() {
 
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()) {
-      std::fprintf(stderr, "Failed to initialize GLFW\n");
-      return false;
-    }
+void handle_spice_error(char *context, char *error) {
 
-  #ifdef __EMSCRIPTEN__
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-  #else
+    state.show_error = true;
+    sprintf(state.error,"SPICE Error in %s: %s\n", context, error);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-  #endif
-
-  #ifdef __EMSCRIPTEN__
-    g_window = glfwCreateWindow(1, 1, "fractonica", nullptr, nullptr);
-  #else
-    g_window = glfwCreateWindow(1280, 720, "fractonica", nullptr, nullptr);
-  #endif
-
-    if (!g_window) {
-      std::fprintf(stderr, "Failed to create GLFW window\n");
-      return false;
-    }
-
-    glfwMakeContextCurrent(g_window);
-    glfwSwapInterval(1);
-    return true;
-  }
-
-  bool init_imgui() {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.IniFilename = nullptr;
-
-    if (!ImGui_ImplGlfw_InitForOpenGL(g_window, /*install_callbacks=*/true)) {
-      std::fprintf(stderr, "ImGui_ImplGlfw_InitForOpenGL failed\n");
-      return false;
-    }
-
-  #ifdef __EMSCRIPTEN__
-    // Ensure your HTML has: <canvas id="canvas"> ... </canvas>
-    ImGui_ImplGlfw_InstallEmscriptenCallbacks(g_window, "#canvas");
-  #endif
-
-    if (!ImGui_ImplOpenGL3_Init(glsl_version())) {
-      std::fprintf(stderr, "ImGui_ImplOpenGL3_Init failed\n");
-      return false;
-    }
-
-    // Fonts: must be reachable at runtime (preloaded for WASM)
-    io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("assets/fonts/primary.ttf", 16.0f);
-
-    return true;
-  }
-
-  void shutdown_everything() {
-    if (g_app) {
-      g_app->cleanup();
-      g_app.reset();
-    }
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
-    if (g_window) {
-      glfwDestroyWindow(g_window);
-      g_window = nullptr;
-    }
-    glfwTerminate();
-  }
-
-  void frame() {
-    glfwPollEvents();
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    g_app->run();
-
-    ImGui::Render();
-
-    int display_w = 0, display_h = 0;
-    glfwGetFramebufferSize(g_window, &display_w, &display_h);
-
-    glViewport(0, 0, display_w, display_h);
-    glClearColor(g_clear_color.x, g_clear_color.y, g_clear_color.z, g_clear_color.w);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-  #ifndef __EMSCRIPTEN__
-    glfwSwapBuffers(g_window);
-  #endif
-  }
-
-#ifdef __EMSCRIPTEN__
-  void emscripten_main_loop_trampoline() {
-    // Optionally stop when the window is requested to close (if you wire that up)
-    frame();
-  }
-#endif
-} // namespace
-
-int main(int /*argc*/, char** /*argv*/) {
-
-  if (!init_glfw_and_window()) {
-    shutdown_everything();
-    return 1;
-  }
-
-  if (!init_imgui()) {
-    shutdown_everything();
-    return 1;
-  }
-
-  g_app = std::make_unique<Fractonica::DesktopApp>();
-  g_app->setup();
-
-#ifdef __EMSCRIPTEN__
-  emscripten_set_main_loop(emscripten_main_loop_trampoline, 0, 1);
-  // NOTE: code below is not reached unless you use emscripten_set_main_loop_arg + cancel
-  return 0;
-#else
-  while (!glfwWindowShouldClose(g_window)) {
-    frame();
-  }
-  shutdown_everything();
-  return 0;
-#endif
 }
 
+static void init() {
+
+    stm_setup();
+
+
+#if defined(USE_CSPICE)
+    moon::init();
 #endif
+
+
+    sg_desc desc{};
+    desc.environment = sglue_environment();
+    desc.logger.func = slog_func;
+    sg_setup(&desc);
+
+    sg_buffer_desc buf_desc{};
+    buf_desc.size = MAX_PARTICLES * sizeof(particle_t);
+    buf_desc.usage.vertex_buffer = true;
+    buf_desc.usage.storage_buffer = true;
+    buf_desc.label = "particle-buffer";
+
+    state.buf = sg_make_buffer(&buf_desc);
+
+    sg_view_desc particle_view_desc{};
+    particle_view_desc.storage_buffer.buffer = state.buf;
+    particle_view_desc.label = "particle-buffer-view";
+
+    state.compute.sbuf_view = sg_make_view(&particle_view_desc);
+
+    sg_pipeline_desc pipeline_desc{};
+    pipeline_desc.compute = true;
+    pipeline_desc.shader = sg_make_shader(update_shader_desc(sg_query_backend()));
+    pipeline_desc.label = "update-pipeline";
+
+    state.compute.pip = sg_make_pipeline(&pipeline_desc);
+
+    const float r = 0.05f;
+
+    const std::array<float, 42> vertices = {
+        // positions            colors
+        0.0f,   -r, 0.0f,       1.0f, 0.0f, 0.0f, 1.0f,
+           r, 0.0f, r,          0.0f, 1.0f, 0.0f, 1.0f,
+           r, 0.0f, -r,         0.0f, 0.0f, 1.0f, 1.0f,
+          -r, 0.0f, -r,         1.0f, 1.0f, 0.0f, 1.0f,
+          -r, 0.0f, r,          0.0f, 1.0f, 1.0f, 1.0f,
+        0.0f,    r, 0.0f,       1.0f, 0.0f, 1.0f, 1.0f
+    };
+    
+    const std::array<uint16_t, 24> indices = {
+        0, 1, 2,    0, 2, 3,    0, 3, 4,    0, 4, 1,
+        5, 1, 2,    5, 2, 3,    5, 3, 4,    5, 4, 1
+    };
+
+    // Geometry Vertex Buffer
+    sg_buffer_desc gbuffer_desc{};
+    gbuffer_desc.data = SG_RANGE(vertices);
+    gbuffer_desc.label = "geometry-vbuf";
+    state.display.vbuf = sg_make_buffer(&gbuffer_desc);
+
+    // Index Buffer
+    sg_buffer_desc ibuffer_desc{};
+    ibuffer_desc.usage.index_buffer = true;
+    ibuffer_desc.data = SG_RANGE(indices);
+    ibuffer_desc.label = "geometry-ibuf";
+    state.display.ibuf = sg_make_buffer(&ibuffer_desc);
+
+    // Render Pipeline
+    sg_pipeline_desc render_pip_desc{};
+    render_pip_desc.shader = sg_make_shader(display_shader_desc(sg_query_backend()));
+    
+    // Layout setup
+    render_pip_desc.layout.buffers[1].step_func = SG_VERTEXSTEP_PER_INSTANCE;
+    render_pip_desc.layout.buffers[1].stride = sizeof(particle_t);
+    
+    render_pip_desc.layout.attrs[ATTR_display_pos].format = SG_VERTEXFORMAT_FLOAT3;
+    render_pip_desc.layout.attrs[ATTR_display_color0].format = SG_VERTEXFORMAT_FLOAT4;
+    render_pip_desc.layout.attrs[ATTR_display_inst_pos].format = SG_VERTEXFORMAT_FLOAT4;
+    render_pip_desc.layout.attrs[ATTR_display_inst_pos].buffer_index = 1;
+
+    render_pip_desc.index_type = SG_INDEXTYPE_UINT16;
+    render_pip_desc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
+    render_pip_desc.depth.write_enabled = true;
+    render_pip_desc.cull_mode = SG_CULLMODE_BACK;
+    render_pip_desc.label = "render-pipeline";
+
+    state.display.pip = sg_make_pipeline(&render_pip_desc);
+
+    // One-time init compute pass
+    sg_pipeline_desc init_pd{};
+    init_pd.compute = true;
+    init_pd.shader = sg_make_shader(init_shader_desc(sg_query_backend()));
+
+    sg_pipeline pip = sg_make_pipeline(&init_pd);
+    
+    sg_pass pass{};
+    pass.compute = true;
+    sg_begin_pass(&pass);
+    sg_apply_pipeline(pip);
+    
+    sg_bindings binds{};
+    binds.views[VIEW_cs_ssbo] = state.compute.sbuf_view;
+    sg_apply_bindings(&binds);
+    
+    sg_dispatch(MAX_PARTICLES / 64, 1, 1);
+    sg_end_pass();
+    sg_destroy_pipeline(pip);
+
+    // ImGui Setup
+    simgui_desc_t simgui_desc{};
+    simgui_desc.logger.func = slog_func;
+    simgui_setup(&simgui_desc);
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    app.setup();
+
+}
+
+uint64_t now() {
+    const auto p1 = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
+}
+
+static void frame() {
+    state.num_particles += NUM_PARTICLES_EMITTED_PER_FRAME;
+    if (state.num_particles > MAX_PARTICLES) {
+        state.num_particles = MAX_PARTICLES;
+    }
+    
+    const float dt = static_cast<float>(sapp_frame_duration());
+
+    // --- Compute Pass ---
+    const cs_params_t cs_params = {
+        .dt = dt,
+        .num_particles = state.num_particles,
+    };
+    
+    sg_pass compute_pass{};
+    compute_pass.compute = true;
+    compute_pass.label = "compute-pass";
+    
+    sg_begin_pass(&compute_pass);
+    sg_apply_pipeline(state.compute.pip);
+    
+    sg_bindings compute_binds{};
+    compute_binds.views[VIEW_cs_ssbo] = state.compute.sbuf_view;
+    sg_apply_bindings(&compute_binds);
+
+    sg_apply_uniforms(UB_cs_params, SG_RANGE(cs_params));
+    sg_dispatch((state.num_particles + 63) / 64, 1, 1);
+    sg_end_pass();
+
+    // --- Render Pass ---
+    const vs_params_t vs_params = compute_vsparams(dt);
+    
+    sg_pass render_pass{};
+    render_pass.action = state.display.pass_action;
+    render_pass.swapchain = sglue_swapchain();
+    render_pass.label = "render-pass";
+    
+    sg_begin_pass(&render_pass);
+    sg_apply_pipeline(state.display.pip);
+    
+    sg_bindings render_binds{};
+    render_binds.vertex_buffers[0] = state.display.vbuf;
+    render_binds.vertex_buffers[1] = state.buf;
+    render_binds.index_buffer = state.display.ibuf;
+    sg_apply_bindings(&render_binds);
+    
+    sg_apply_uniforms(UB_vs_params, SG_RANGE(vs_params));
+    sg_draw(0, 24, state.num_particles);
+
+    // --- ImGui ---
+    const int width = sapp_width();
+    const int height = sapp_height();
+    const double delta_time = sapp_frame_duration();
+    const float dpi_scale = sapp_dpi_scale();
+    
+    // Explicit constructor for C++ clarity
+    simgui_frame_desc_t frame_desc{};
+    frame_desc.width = width;
+    frame_desc.height = height;
+    frame_desc.delta_time = delta_time;
+    frame_desc.dpi_scale = dpi_scale;
+    simgui_new_frame(&frame_desc);
+
+    app.run();
+#if defined(USE_CSPICE)
+
+    auto et = cspice_utils::get_current_time_et();
+    moon::AlignmentData data = moon::get_eclipse_alignment(et);
+    ImGui::Text("Phase: %f", data.phase_angle_deg);
+
+
+#endif
+
+    simgui_render();
+    sg_end_pass();
+    sg_commit();
+}
+
+static void cleanup() {
+    simgui_shutdown();
+    sg_shutdown();
+}
+
+static void handle_input(const sapp_event* event) {
+    simgui_handle_event(event);
+}
+
+sapp_desc sokol_main(int argc, char* argv[]) {
+    // Silence unused parameter warnings
+    (void)argc; 
+    (void)argv;
+    
+    sapp_desc desc{};
+    desc.init_cb = init;
+    desc.frame_cb = frame;
+    desc.cleanup_cb = cleanup;
+    desc.event_cb = handle_input;
+    desc.width = 1024;
+    desc.height = 768;
+    desc.window_title = "fractonica";
+    desc.ios.keyboard_resizes_canvas = false;
+    desc.icon.sokol_default = true;
+    desc.enable_clipboard = true;
+    desc.logger.func = slog_func;
+    return desc;
+}

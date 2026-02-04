@@ -1,0 +1,15 @@
+---
+platform: linux
+generator: Ninja
+build_tool: vscode
+build_type: Debug
+vscode_exclude_from_workspace:
+    - fips-glfw
+    - fips-dawn
+    - libs-tools-bin
+    - fips-utils
+    - fips-libmodplug
+    - fips-ozz-animation
+    - dcimgui
+defines:
+    SOKOL_USE_WGPU_DAWN: ON

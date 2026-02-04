@@ -1,0 +1,17 @@
+#
+# sokol-samples
+#
+---
+policies:
+  no_auto_import: true
+imports:
+  sokol:
+    git: https://github.com/floooh/sokol
+  dcimgui:
+    git: https://github.com/floooh/dcimgui
+  fips-dawn:
+    git: https://github.com/fips-libs/fips-dawn
+  sokol-tools-bin:
+    git: https://github.com/floooh/sokol-tools-bin
+  cspice:
+    git: https://github.com/dimaswift/cspice
