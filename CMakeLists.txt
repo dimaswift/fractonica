@@ -3,6 +3,8 @@ project(fractonica)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
+add_subdirectory(core)
+
 set(FIPS_IMPORT 1)
 
 if (FIPS_IMPORT)
@@ -77,6 +79,7 @@ else ()
     include_directories(libs)
 
     include_directories(${ROOT_DIR}/fips-build/fractonica/win/src)
+    include_directories(core/include)
 
     target_include_directories(imgui PUBLIC ${ROOT_DIR}/dcimgui/src)
     target_include_directories(imgui-docking PUBLIC ${ROOT_DIR}/dcimgui/src-docking)
@@ -90,6 +93,7 @@ elseif (MSVC)
     target_compile_options(imgui-docking PUBLIC /wd4190)
 endif ()
 
-    add_executable(main src/main.cpp)
+
+    add_executable(main src/main.cpp src/ImGuiDisplay.cpp)
 
 endif ()

@@ -2,15 +2,22 @@
 #include "sokol_gfx.h"
 #include "sokol_log.h"
 #include "sokol_glue.h"
+#include "sokol_time.h"
 #include "imgui.h"
 #define SOKOL_IMGUI_IMPL
 #include <chrono>
 #include <cstdio>
+
+#include "DesktopApp.h"
+#include "ImGuiInput.h"
+#include "ImGuiDisplay.h"
 #include "sokol_imgui.h"
+#include "UnixClock.h"
 #include "vecmath/vecmath.h"
 using namespace vecmath;
 #include "compute.glsl.h"
 #include <array>
+#include "LunarClockApp.h"
 
 //#define USE_CSPICE
 
@@ -42,18 +49,18 @@ struct DisplayState {
 struct AppState {
     int num_particles = 0;
     float ry = 0.0f;
-    sg_buffer buf;
-    ComputeState compute;
-    DisplayState display;
+    sg_buffer buf{};
+    ComputeState compute{};
+    DisplayState display{};
     bool show_test_window = true;
     bool show_another_window = false;
     bool show_error = false;
     bool kernel_loaded = false;
-    char* error;
-    //LunarDataset lunar;
+    char* error{};
 };
 
 static AppState state{};
+static Fractonica::DesktopApp app;
 
 static vs_params_t compute_vsparams(float frame_time) {
     const mat44_t proj = mat44_perspective_fov_rh(vecmath_radians(60.0f), sapp_widthf()/sapp_heightf(), 0.01f, 50.0f);
@@ -75,9 +82,9 @@ void handle_spice_error(char *context, char *error) {
 
 }
 
-
 static void init() {
 
+    stm_setup();
 
 
 #if defined(USE_CSPICE)
@@ -188,6 +195,8 @@ static void init() {
     simgui_setup(&simgui_desc);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+    app.setup();
+
 }
 
 uint64_t now() {
@@ -258,16 +267,7 @@ static void frame() {
     frame_desc.dpi_scale = dpi_scale;
     simgui_new_frame(&frame_desc);
 
-    static float f = 0.0f;
-    ImGui::Text("Drag windows over one another!");
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-    ImGui::ColorEdit3("clear color", &state.display.pass_action.colors[0].clear_value.r);
-    
-    if (ImGui::Button("Test Window")) state.show_test_window = !state.show_test_window;
-    if (ImGui::Button("Another Window")) state.show_another_window = !state.show_another_window;
-    
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
+    app.run();
 #if defined(USE_CSPICE)
 
     auto et = cspice_utils::get_current_time_et();
@@ -276,8 +276,6 @@ static void frame() {
 
 
 #endif
-
-  //  ui_lunar_window();
 
     simgui_render();
     sg_end_pass();
@@ -289,7 +287,7 @@ static void cleanup() {
     sg_shutdown();
 }
 
-static void input(const sapp_event* event) {
+static void handle_input(const sapp_event* event) {
     simgui_handle_event(event);
 }
 
@@ -302,7 +300,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
     desc.init_cb = init;
     desc.frame_cb = frame;
     desc.cleanup_cb = cleanup;
-    desc.event_cb = input;
+    desc.event_cb = handle_input;
     desc.width = 1024;
     desc.height = 768;
     desc.window_title = "fractonica";

@@ -1,0 +1,5 @@
+{
+  "name": "fractonica-core",
+  "version": "0.0.1",
+  "build": { "srcDir": "src", "includeDir": "include" }
+}
