@@ -270,13 +270,8 @@ static void frame() {
 
 #if defined(USE_CSPICE)
 
-    const auto lat = 52.981741;
-    const auto lon = 36.137561;
     auto et = cspice_utils::get_current_time_et();
     moon::AlignmentData data = moon::get_eclipse_alignment(et);
-    // ImGui::Text("distance: %f", distance_km);
-    // ImGui::Text("velocity: %f", velocity_kms);
-    // ImGui::Text("declination: %f", declination_deg);
     ImGui::Text("Phase: %f", data.phase_angle_deg);
 
 

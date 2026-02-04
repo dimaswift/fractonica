@@ -29,12 +29,13 @@ namespace moon {
     // If you are on C++11/14, move 'initialized' to a .cpp file to avoid linking errors.
     inline static bool initialized = false;
 
+
     inline void init() {
         if (initialized) {
             return;
         }
         // Ensure you handle kernel loading errors in production
-        load_kernels_from_path("./kernels");
+        load_kernels_from_path(rootDir() +"/kernels");
 
         // Error check: CSPICE error handling is tricky, simplified here
         if (failed_c()) {
