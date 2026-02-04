@@ -4,11 +4,26 @@
 #include "sokol_glue.h"
 #include "imgui.h"
 #define SOKOL_IMGUI_IMPL
+#include <chrono>
+#include <cstdio>
 #include "sokol_imgui.h"
+
+
+
 #include "vecmath/vecmath.h"
 using namespace vecmath;
 #include "compute.glsl.h"
 #include <array>
+
+#define USE_CSPICE
+
+#if defined(USE_CSPICE)
+
+#include "../libs/astro/moon.hpp"
+#include "../libs/astro/cspice_utils.hpp"
+
+#endif
+
 
 constexpr int MAX_PARTICLES = 512 * 1024;
 constexpr int NUM_PARTICLES_EMITTED_PER_FRAME = 10;
@@ -35,6 +50,10 @@ struct AppState {
     DisplayState display;
     bool show_test_window = true;
     bool show_another_window = false;
+    bool show_error = false;
+    bool kernel_loaded = false;
+    char* error;
+    //LunarDataset lunar;
 };
 
 static AppState state{};
@@ -51,7 +70,23 @@ static vs_params_t compute_vsparams(float frame_time) {
     };
 }
 
+
+void handle_spice_error(char *context, char *error) {
+
+    state.show_error = true;
+    sprintf(state.error,"SPICE Error in %s: %s\n", context, error);
+
+}
+
+
 static void init() {
+
+
+
+#if defined(USE_CSPICE)
+    moon::init();
+#endif
+
 
     sg_desc desc{};
     desc.environment = sglue_environment();
@@ -155,6 +190,12 @@ static void init() {
     simgui_desc.logger.func = slog_func;
     simgui_setup(&simgui_desc);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+}
+
+uint64_t now() {
+    const auto p1 = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
 }
 
 static void frame() {
@@ -230,17 +271,21 @@ static void frame() {
     
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-    if (state.show_another_window) {
-        ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiCond_FirstUseEver);
-        ImGui::Begin("Another Window", &state.show_another_window);
-        ImGui::Text("Hello");
-        ImGui::End();
-    }
+#if defined(USE_CSPICE)
 
-    if (state.show_test_window) {
-        ImGui::SetNextWindowPos(ImVec2(460, 20), ImGuiCond_FirstUseEver);
-        ImGui::ShowDemoWindow();
-    }
+    const auto lat = 52.981741;
+    const auto lon = 36.137561;
+    auto et = cspice_utils::get_current_time_et();
+    moon::AlignmentData data = moon::get_eclipse_alignment(et);
+    // ImGui::Text("distance: %f", distance_km);
+    // ImGui::Text("velocity: %f", velocity_kms);
+    // ImGui::Text("declination: %f", declination_deg);
+    ImGui::Text("Phase: %f", data.phase_angle_deg);
+
+
+#endif
+
+  //  ui_lunar_window();
 
     simgui_render();
     sg_end_pass();

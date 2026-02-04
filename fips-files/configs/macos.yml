@@ -5,3 +5,4 @@ build_tool: ninja
 build_type: Debug
 defines:
   SOKOL_USE_METAL: ON
+  USE_CSPICE: ON

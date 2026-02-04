@@ -6,8 +6,15 @@ project(fractonica)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
+
 get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
 include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
+
+include("${FIPS_ROOT_DIR}/../cspice/fips.cmake")
+
+if (USE_CSPICE)
+    cspice_fetch_kernels()
+endif()
 
 if (FIPS_EMSCRIPTEN)
     set(USE_DAWN_SDK ON)

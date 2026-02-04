@@ -13,4 +13,4 @@ vscode_exclude_from_workspace:
     - fips-ozz-animation
     - dcimgui
 defines:
-    SOKOL_USE_WGPU_DAWN: ON
+    USE_CSPICE: ON

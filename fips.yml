@@ -13,3 +13,5 @@ imports:
     git: https://github.com/fips-libs/fips-dawn
   sokol-tools-bin:
     git: https://github.com/floooh/sokol-tools-bin
+  cspice:
+    git: https://github.com/dimaswift/cspice
