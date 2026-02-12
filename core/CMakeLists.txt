@@ -11,6 +11,8 @@ target_sources(core PRIVATE
         src/LunarGlyph.cpp
         src/LunarTime.cpp
         src/MatrixClock.cpp
+        src/saros/lunar_impl.c
+        src/saros/solar_impl.c
 )
 
 target_include_directories(core PUBLIC

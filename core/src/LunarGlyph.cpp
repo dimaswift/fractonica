@@ -38,6 +38,21 @@ namespace Fractonica {
         MirrorAntiDiag = 7
     };
 
+    static constexpr QuadOp SYMMETRIC_OPERATIONS[12][4] = {
+    {QuadOp::Identity, QuadOp::MirrorX, QuadOp::Rot90, QuadOp::MirrorDiag},
+    {QuadOp::Identity, QuadOp::MirrorX, QuadOp::Rot180, QuadOp::MirrorY},
+    {QuadOp::Identity, QuadOp::MirrorX, QuadOp::Rot270, QuadOp::MirrorAntiDiag},
+    {QuadOp::Rot90, QuadOp::MirrorDiag, QuadOp::Identity, QuadOp::MirrorX},
+    {QuadOp::Rot90, QuadOp::MirrorDiag, QuadOp::Rot180, QuadOp::MirrorY},
+    {QuadOp::Rot90, QuadOp::MirrorDiag, QuadOp::Rot270, QuadOp::MirrorAntiDiag},
+    {QuadOp::Rot180, QuadOp::MirrorY, QuadOp::Identity, QuadOp::MirrorX},
+    {QuadOp::Rot180, QuadOp::MirrorY, QuadOp::Rot90, QuadOp::MirrorDiag},
+    {QuadOp::Rot180, QuadOp::MirrorY, QuadOp::Rot270, QuadOp::MirrorAntiDiag},
+    {QuadOp::Rot270, QuadOp::MirrorAntiDiag, QuadOp::Identity, QuadOp::MirrorX},
+    {QuadOp::Rot270, QuadOp::MirrorAntiDiag, QuadOp::Rot90, QuadOp::MirrorDiag},
+    {QuadOp::Rot270, QuadOp::MirrorAntiDiag, QuadOp::Rot180, QuadOp::MirrorY}
+    };
+
     static void applyOp4(uint8_t x, uint8_t y, QuadOp op, uint8_t &ox, uint8_t &oy) {
         switch (op) {
             case QuadOp::Identity:      ox=x;      oy=y;      break;
@@ -106,6 +121,19 @@ namespace Fractonica {
         }
     }
 
+    void LunarGlyph::drawRange(const int64_t now, const int64_t from, const int64_t to, IMatrix *matrix) const {
+
+        if (now > to || now < from) return;
+        matrix->clear();
+
+        const auto bin = static_cast<int32_t>(floor( 4096 * ((static_cast<double>(now) - static_cast<double>(from))
+            / (static_cast<double>(to) - static_cast<double>(from)))));
+        const auto sym = SYMMETRIC_OPERATIONS[0];
+        for (int8_t i = 3; i >= 0; i--) {
+            drawGlyph((bin >> 3 * i) % 8, 3 - i, 0xFF0000, sym[i], matrix);
+        }
+        matrix->flush();
+    }
 
     void LunarGlyph::draw(const int64_t timestamp, IMatrix *matrix) const {
 

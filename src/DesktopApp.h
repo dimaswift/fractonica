@@ -18,7 +18,7 @@ namespace Fractonica {
         DesktopApp();
         void run();
         void setup();
-        void cleanup();
+        void shutdown();
     };
 
 }

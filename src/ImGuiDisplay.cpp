@@ -80,17 +80,17 @@ void ImGuiDisplay::flush()
 {
     if (!begun_) return;
 
-    ImGui::Begin(windowName_);
+   // ImGui::Begin(windowName_);
 
     // Optional: controls inside the window
-    ImGui::SliderFloat("Scale", &scale_, 2.0f, 40.0f, "%.1f");
-    int shape = (shape_ == LedShape::Circle) ? 1 : 0;
-    if (ImGui::RadioButton("Square", shape == 0)) shape = 0;
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Circle", shape == 1)) shape = 1;
-    shape_ = (shape == 1) ? LedShape::Circle : LedShape::Square;
-
-    const float s = (scale_ < 1.0f) ? 1.0f : scale_;
+    // ImGui::SliderFloat("Scale", &scale_, 2.0f, 40.0f, "%.1f");
+    // int shape = (shape_ == LedShape::Circle) ? 1 : 0;
+    // if (ImGui::RadioButton("Square", shape == 0)) shape = 0;
+    // ImGui::SameLine();
+    // if (ImGui::RadioButton("Circle", shape == 1)) shape = 1;
+    // shape_ = (shape == 1) ? LedShape::Circle : LedShape::Square;
+    //
+    const float s = scale_;
 
     // Compute drawing area and create an invisible canvas
     const ImVec2 canvas_size(width_ * s, height_ * s);
@@ -133,7 +133,7 @@ void ImGuiDisplay::flush()
     // Outline
     dl->AddRect(p0, ImVec2(p0.x + canvas_size.x, p0.y + canvas_size.y), IM_COL32(80, 80, 80, 255));
 
-    ImGui::End();
+  //  ImGui::End();
 }
 
 void ImGuiDisplay::clear() {

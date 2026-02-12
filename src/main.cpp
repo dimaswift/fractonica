@@ -1,265 +1,66 @@
 #include "sokol_app.h"
 #include "sokol_gfx.h"
-#include "sokol_log.h"
 #include "sokol_glue.h"
-#include "sokol_time.h"
+#include "sokol_log.h"
 #include "imgui.h"
 #define SOKOL_IMGUI_IMPL
-#include <chrono>
-#include <cstdio>
-
 #include "DesktopApp.h"
-#include "ImGuiInput.h"
-#include "ImGuiDisplay.h"
 #include "sokol_imgui.h"
-#include "UnixClock.h"
-#include "vecmath/vecmath.h"
-using namespace vecmath;
-#include "compute.glsl.h"
-#include <array>
-#include "LunarClockApp.h"
-
-//#define USE_CSPICE
-
-#if defined(USE_CSPICE)
-
-#include "../libs/astro/moon.hpp"
-#include "../libs/astro/cspice_utils.hpp"
-
-#endif
-
-
-constexpr int MAX_PARTICLES = 512 * 1024;
-constexpr int NUM_PARTICLES_EMITTED_PER_FRAME = 10;
-
-using namespace vecmath;
-
-struct ComputeState {
-    sg_view sbuf_view;
-    sg_pipeline pip;
-};
-
-struct DisplayState {
-    sg_buffer vbuf;
-    sg_buffer ibuf;
-    sg_pipeline pip;
-    sg_pass_action pass_action;
-};
+#include "Mandelbrot.h"
 
 struct AppState {
-    int num_particles = 0;
-    float ry = 0.0f;
-    sg_buffer buf{};
-    ComputeState compute{};
-    DisplayState display{};
-    bool show_test_window = true;
-    bool show_another_window = false;
-    bool show_error = false;
-    bool kernel_loaded = false;
-    char* error{};
+    sg_pass_action pass_action = {};
+    Fractonica::Mandelbrot mandelbrot;
 };
 
-static AppState state{};
+static AppState state;
 static Fractonica::DesktopApp app;
 
-static vs_params_t compute_vsparams(float frame_time) {
-    const mat44_t proj = mat44_perspective_fov_rh(vecmath_radians(60.0f), sapp_widthf()/sapp_heightf(), 0.01f, 50.0f);
-    const mat44_t view = mat44_look_at_rh(vec3(0.0f, 1.5f, 8.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-    const mat44_t view_proj = mat44_mul_mat44(view, proj);
-    
-    state.ry += 60.0f * frame_time;
-    
-    return vs_params_t {
-        .mvp = mat44_mul_mat44(mat44_rotation_y(vecmath_radians(state.ry)), view_proj),
-    };
+static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
+    (void)dl;
+
+    const int cx = static_cast<int>(cmd->ClipRect.x);
+    const int cy = static_cast<int>(cmd->ClipRect.y);
+    const int cw = static_cast<int>(cmd->ClipRect.z - cmd->ClipRect.x);
+    const int ch = static_cast<int>(cmd->ClipRect.w - cmd->ClipRect.y);
+
+    sg_apply_scissor_rect(cx, cy, cw, ch, true);
+    sg_apply_viewport(cx, cy, cw, ch, true);
+
+    state.mandelbrot.draw();
 }
 
-
-void handle_spice_error(char *context, char *error) {
-
-    state.show_error = true;
-    sprintf(state.error,"SPICE Error in %s: %s\n", context, error);
-
-}
-
-static void init() {
-
-    stm_setup();
-
-
-#if defined(USE_CSPICE)
-    moon::init();
-#endif
-
-
-    sg_desc desc{};
+void init() {
+    app.setup();
+    sg_desc desc = {};
     desc.environment = sglue_environment();
     desc.logger.func = slog_func;
     sg_setup(&desc);
 
-    sg_buffer_desc buf_desc{};
-    buf_desc.size = MAX_PARTICLES * sizeof(particle_t);
-    buf_desc.usage.vertex_buffer = true;
-    buf_desc.usage.storage_buffer = true;
-    buf_desc.label = "particle-buffer";
+    // Default pass action
+    state.pass_action.colors[0].load_action = SG_LOADACTION_CLEAR;
+    state.pass_action.colors[0].clear_value = { 0.1f, 0.1f, 0.1f, 1.0f };
 
-    state.buf = sg_make_buffer(&buf_desc);
-
-    sg_view_desc particle_view_desc{};
-    particle_view_desc.storage_buffer.buffer = state.buf;
-    particle_view_desc.label = "particle-buffer-view";
-
-    state.compute.sbuf_view = sg_make_view(&particle_view_desc);
-
-    sg_pipeline_desc pipeline_desc{};
-    pipeline_desc.compute = true;
-    pipeline_desc.shader = sg_make_shader(update_shader_desc(sg_query_backend()));
-    pipeline_desc.label = "update-pipeline";
-
-    state.compute.pip = sg_make_pipeline(&pipeline_desc);
-
-    const float r = 0.05f;
-
-    const std::array<float, 42> vertices = {
-        // positions            colors
-        0.0f,   -r, 0.0f,       1.0f, 0.0f, 0.0f, 1.0f,
-           r, 0.0f, r,          0.0f, 1.0f, 0.0f, 1.0f,
-           r, 0.0f, -r,         0.0f, 0.0f, 1.0f, 1.0f,
-          -r, 0.0f, -r,         1.0f, 1.0f, 0.0f, 1.0f,
-          -r, 0.0f, r,          0.0f, 1.0f, 1.0f, 1.0f,
-        0.0f,    r, 0.0f,       1.0f, 0.0f, 1.0f, 1.0f
-    };
-    
-    const std::array<uint16_t, 24> indices = {
-        0, 1, 2,    0, 2, 3,    0, 3, 4,    0, 4, 1,
-        5, 1, 2,    5, 2, 3,    5, 3, 4,    5, 4, 1
-    };
-
-    // Geometry Vertex Buffer
-    sg_buffer_desc gbuffer_desc{};
-    gbuffer_desc.data = SG_RANGE(vertices);
-    gbuffer_desc.label = "geometry-vbuf";
-    state.display.vbuf = sg_make_buffer(&gbuffer_desc);
-
-    // Index Buffer
-    sg_buffer_desc ibuffer_desc{};
-    ibuffer_desc.usage.index_buffer = true;
-    ibuffer_desc.data = SG_RANGE(indices);
-    ibuffer_desc.label = "geometry-ibuf";
-    state.display.ibuf = sg_make_buffer(&ibuffer_desc);
-
-    // Render Pipeline
-    sg_pipeline_desc render_pip_desc{};
-    render_pip_desc.shader = sg_make_shader(display_shader_desc(sg_query_backend()));
-    
-    // Layout setup
-    render_pip_desc.layout.buffers[1].step_func = SG_VERTEXSTEP_PER_INSTANCE;
-    render_pip_desc.layout.buffers[1].stride = sizeof(particle_t);
-    
-    render_pip_desc.layout.attrs[ATTR_display_pos].format = SG_VERTEXFORMAT_FLOAT3;
-    render_pip_desc.layout.attrs[ATTR_display_color0].format = SG_VERTEXFORMAT_FLOAT4;
-    render_pip_desc.layout.attrs[ATTR_display_inst_pos].format = SG_VERTEXFORMAT_FLOAT4;
-    render_pip_desc.layout.attrs[ATTR_display_inst_pos].buffer_index = 1;
-
-    render_pip_desc.index_type = SG_INDEXTYPE_UINT16;
-    render_pip_desc.depth.compare = SG_COMPAREFUNC_LESS_EQUAL;
-    render_pip_desc.depth.write_enabled = true;
-    render_pip_desc.cull_mode = SG_CULLMODE_BACK;
-    render_pip_desc.label = "render-pipeline";
-
-    state.display.pip = sg_make_pipeline(&render_pip_desc);
-
-    // One-time init compute pass
-    sg_pipeline_desc init_pd{};
-    init_pd.compute = true;
-    init_pd.shader = sg_make_shader(init_shader_desc(sg_query_backend()));
-
-    sg_pipeline pip = sg_make_pipeline(&init_pd);
-    
-    sg_pass pass{};
-    pass.compute = true;
-    sg_begin_pass(&pass);
-    sg_apply_pipeline(pip);
-    
-    sg_bindings binds{};
-    binds.views[VIEW_cs_ssbo] = state.compute.sbuf_view;
-    sg_apply_bindings(&binds);
-    
-    sg_dispatch(MAX_PARTICLES / 64, 1, 1);
-    sg_end_pass();
-    sg_destroy_pipeline(pip);
-
-    // ImGui Setup
+    // Setup ImGui
     simgui_desc_t simgui_desc{};
     simgui_desc.logger.func = slog_func;
     simgui_setup(&simgui_desc);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    app.setup();
-
+    state.mandelbrot.setup(512, 512);
 }
 
-uint64_t now() {
-    const auto p1 = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::seconds>(p1.time_since_epoch()).count();
-}
+void frame() {
+    state.mandelbrot.compute();
 
-static void frame() {
-    state.num_particles += NUM_PARTICLES_EMITTED_PER_FRAME;
-    if (state.num_particles > MAX_PARTICLES) {
-        state.num_particles = MAX_PARTICLES;
-    }
-    
-    const float dt = static_cast<float>(sapp_frame_duration());
 
-    // --- Compute Pass ---
-    const cs_params_t cs_params = {
-        .dt = dt,
-        .num_particles = state.num_particles,
-    };
-    
-    sg_pass compute_pass{};
-    compute_pass.compute = true;
-    compute_pass.label = "compute-pass";
-    
-    sg_begin_pass(&compute_pass);
-    sg_apply_pipeline(state.compute.pip);
-    
-    sg_bindings compute_binds{};
-    compute_binds.views[VIEW_cs_ssbo] = state.compute.sbuf_view;
-    sg_apply_bindings(&compute_binds);
-
-    sg_apply_uniforms(UB_cs_params, SG_RANGE(cs_params));
-    sg_dispatch((state.num_particles + 63) / 64, 1, 1);
-    sg_end_pass();
-
-    // --- Render Pass ---
-    const vs_params_t vs_params = compute_vsparams(dt);
-    
-    sg_pass render_pass{};
-    render_pass.action = state.display.pass_action;
-    render_pass.swapchain = sglue_swapchain();
-    render_pass.label = "render-pass";
-    
-    sg_begin_pass(&render_pass);
-    sg_apply_pipeline(state.display.pip);
-    
-    sg_bindings render_binds{};
-    render_binds.vertex_buffers[0] = state.display.vbuf;
-    render_binds.vertex_buffers[1] = state.buf;
-    render_binds.index_buffer = state.display.ibuf;
-    sg_apply_bindings(&render_binds);
-    
-    sg_apply_uniforms(UB_vs_params, SG_RANGE(vs_params));
-    sg_draw(0, 24, state.num_particles);
-
-    // --- ImGui ---
+    // ========================================
+    // IMGUI UI
+    // ========================================
     const int width = sapp_width();
     const int height = sapp_height();
     const double delta_time = sapp_frame_duration();
     const float dpi_scale = sapp_dpi_scale();
-    
-    // Explicit constructor for C++ clarity
     simgui_frame_desc_t frame_desc{};
     frame_desc.width = width;
     frame_desc.height = height;
@@ -268,45 +69,57 @@ static void frame() {
     simgui_new_frame(&frame_desc);
 
     app.run();
-#if defined(USE_CSPICE)
+    ImGui::SetNextWindowPos(ImVec2(512, 80), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(state.mandelbrot.getWidth() + 10, state.mandelbrot.getHeight() + 140), ImGuiCond_Once);
 
-    auto et = cspice_utils::get_current_time_et();
-    moon::AlignmentData data = moon::get_eclipse_alignment(et);
-    ImGui::Text("Phase: %f", data.phase_angle_deg);
+    if (ImGui::Begin("Mandelbrot Fractal")) {
+
+        state.mandelbrot.drawGui();
+
+        ImGui::Separator();
+
+        if (ImGui::BeginChild("Fractal View", ImVec2(state.mandelbrot.getWidth(), state.mandelbrot.getHeight()), true, ImGuiWindowFlags_None)) {
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            dl->AddCallback(draw_mandelbrot, nullptr);
+        }
+
+        ImGui::EndChild();
+    }
+    ImGui::End();
 
 
-#endif
-
+    sg_pass render_pass{};
+    render_pass.action = state.pass_action;
+    render_pass.swapchain = sglue_swapchain();
+    render_pass.label = "render-pass";
+    sg_begin_pass(&render_pass);
     simgui_render();
+
     sg_end_pass();
     sg_commit();
 }
 
-static void cleanup() {
+void input(const sapp_event* ev) {
+    simgui_handle_event(ev);
+}
+
+void cleanup() {
+    app.shutdown();
+    state.mandelbrot.shutdown();
     simgui_shutdown();
     sg_shutdown();
 }
 
-static void handle_input(const sapp_event* event) {
-    simgui_handle_event(event);
-}
-
 sapp_desc sokol_main(int argc, char* argv[]) {
-    // Silence unused parameter warnings
-    (void)argc; 
-    (void)argv;
-    
-    sapp_desc desc{};
-    desc.init_cb = init;
-    desc.frame_cb = frame;
-    desc.cleanup_cb = cleanup;
-    desc.event_cb = handle_input;
-    desc.width = 1024;
-    desc.height = 768;
-    desc.window_title = "fractonica";
-    desc.ios.keyboard_resizes_canvas = false;
-    desc.icon.sokol_default = true;
-    desc.enable_clipboard = true;
-    desc.logger.func = slog_func;
-    return desc;
+    (void)argc; (void)argv;
+    return (sapp_desc){
+        .init_cb = init,
+        .frame_cb = frame,
+        .cleanup_cb = cleanup,
+        .event_cb = input,
+        .width = 1200,
+        .height = 900,
+        .window_title = "Fractonica",
+        .logger.func = slog_func,
+    };
 }
