@@ -7,16 +7,22 @@
 #include "DesktopApp.h"
 #include "glyph.h"
 #include "sokol_imgui.h"
-#include "Mandelbrot.h"
+//#include "Mandelbrot.h"
 
 struct AppState {
     sg_pass_action pass_action = {};
-    Fractonica::Mandelbrot mandelbrot;
+   // Fractonica::Mandelbrot mandelbrot;
+    bool showSaros = false;
 };
 
 static AppState state;
 static Fractonica::DesktopApp app;
-static Fractonica::Glyph glyph;
+
+static std::vector<Fractonica::Glyph> glyphs = {};
+
+// static Fractonica::Glyph glyph141(141);
+// static Fractonica::Glyph glyph128(128);
+// static Fractonica::Glyph glyph118(118);
 
 static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
     (void)dl;
@@ -29,10 +35,13 @@ static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
     sg_apply_scissor_rect(cx, cy, cw, ch, true);
     sg_apply_viewport(cx, cy, cw, ch, true);
 
-    state.mandelbrot.draw();
+   // state.mandelbrot.draw();
 }
 
 void init() {
+
+    glyphs.emplace_back(141);
+
     app.setup();
     sg_desc desc = {};
     desc.environment = sglue_environment();
@@ -49,11 +58,11 @@ void init() {
     simgui_setup(&simgui_desc);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    state.mandelbrot.setup(512, 512);
+   // state.mandelbrot.setup(512, 512);
 }
 
 void frame() {
-    state.mandelbrot.compute();
+   // state.mandelbrot.compute();
 
 
     // ========================================
@@ -70,26 +79,52 @@ void frame() {
     frame_desc.dpi_scale = dpi_scale;
     simgui_new_frame(&frame_desc);
 
-    glyph.render(delta_time);
+    if (ImGui::BeginMainMenuBar()) {
 
-    //app.run();
-    // ImGui::SetNextWindowPos(ImVec2(512, 80), ImGuiCond_Once);
-    // ImGui::SetNextWindowSize(ImVec2(state.mandelbrot.getWidth() + 10, state.mandelbrot.getHeight() + 140), ImGuiCond_Once);
-    //
-    // if (ImGui::Begin("Mandelbrot Fractal")) {
-    //
-    //     state.mandelbrot.drawGui();
-    //
-    //     ImGui::Separator();
-    //
-    //     if (ImGui::BeginChild("Fractal View", ImVec2(state.mandelbrot.getWidth(), state.mandelbrot.getHeight()), true, ImGuiWindowFlags_None)) {
-    //         ImDrawList* dl = ImGui::GetWindowDrawList();
-    //         dl->AddCallback(draw_mandelbrot, nullptr);
-    //     }
-    //
-    //     ImGui::EndChild();
-    // }
-    // ImGui::End();
+        if (ImGui::BeginMenu("Options")) {
+
+            if (ImGui::MenuItem("Saros Explorer")) {
+                state.showSaros = true;
+            }
+
+            if (ImGui::BeginMenu("Add Saros")) {
+
+                static int saros = 141;
+                ImGui::InputInt("Saros", &saros);
+                if (ImGui::Button("Add")) {
+
+                    glyphs.emplace_back(saros);
+                }
+
+                ImGui::EndMenu();
+            }
+
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+
+
+    for (auto& glyph : glyphs) {
+        glyph.render(delta_time);
+    }
+
+    // app.run();
+    //ImGui::SetNextWindowPos(ImVec2(512, 80), ImGuiCond_Once);
+    //ImGui::SetNextWindowSize(ImVec2(state.mandelbrot.getWidth() + 10, state.mandelbrot.getHeight() + 140), ImGuiCond_Once);
+
+    if (state.showSaros) {
+        if (!ImGui::Begin("Saros Explorer", &state.showSaros)) {
+            state.showSaros = false;
+        }
+
+        app.run();
+        ImGui::End();
+    }
+
+
 
 
     sg_pass render_pass{};
@@ -109,7 +144,7 @@ void input(const sapp_event* ev) {
 
 void cleanup() {
     app.shutdown();
-    state.mandelbrot.shutdown();
+   // state.mandelbrot.shutdown();
     simgui_shutdown();
     sg_shutdown();
 }

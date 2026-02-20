@@ -17,15 +17,20 @@ namespace Fractonica {
     class Glyph {
         int current = 0;
         double time = 0;
-        GlyphType selectedType = Line;
+        GlyphType selectedType = Path;
         int page = 0;
         int rowSize = 8;
-        float size = 10;
-        float thickness = 2;
+        float size = 28;
+        float thickness = 3;
         ImColor color = ImColor(255, 255, 255);
-        bool showLabels = true;
-        void draw(int value, ImDrawList* draw_list, ImVec2 position, GlyphType type) const;
+        bool showLabels = false;
+        bool showSettings = false;
+        int saros = 141;
+
+        void draw(int64_t value, ImDrawList* draw_list, ImVec2 position, GlyphType type) const;
+
     public:
+        Glyph(int saros_) : saros(saros_) {}
         void render(double dt);
     };
 }

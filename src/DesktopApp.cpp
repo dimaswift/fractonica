@@ -30,8 +30,6 @@ namespace Fractonica {
         auto solarWin = find_solar_saros_window(now, solar.eclipse.info.solar.saros_number);
         auto lunarWin = find_lunar_saros_window(now, lunar.eclipse.info.lunar.saros_number);
 
-        ImGui::Begin("Saros");
-
         Gui::UnixDatePicker("Reference (present)", &yearNow, &monthNow, &dayNow, &now);
 
         Gui::UnixDatePicker("Birthday", &year, &month, &day, &sarosLookup);
@@ -57,34 +55,34 @@ namespace Fractonica {
 
 
         if (solarWin.future.valid) {
-            auto d = static_cast<double>(solarWin.future.unix_time - solarWin.past.unix_time);
+           // auto d = static_cast<double>(solarWin.future.unix_time - solarWin.past.unix_time);
             Gui::Timestamp(solarWin.future.unix_time, "Future Eclipse");
             //ImGui::Text("Duration seconds %f", d);
-            ImGui::Text("Octal Bin %lld", Utils::DecimaToOctal(floor(( (now - solarWin.past.unix_time) / d) * pow(8, 12))));
-            for (int i = 0; i < 32; ++i) {
-               // ImGui::InputScalar("Delta",ImGuiDataType_Double, &d);
-
-                auto f = 1.0 / d;
-                char freqBuf[32];
-                Utils::FormatFrequency(static_cast<int64_t>(f), freqBuf, sizeof(freqBuf));
-                ImGui::Text("Harmonic: %d Frequency: %s", i + 1, freqBuf);
-                Gui::Duration(static_cast<int64_t>(d));
-                d /= 8;
-                ImGui::InputScalar("N", ImGuiDataType_Double, &f);
-
-            }
-            double df = 531187804423397.0;
-            ImGui::InputScalar("Base", ImGuiDataType_Double, &df);
-            for (int i = 0; i < 32; ++i) {
-                // ImGui::InputScalar("Delta",ImGuiDataType_Double, &d);
-
-                auto p = 1.0 / df;
-                char freqBuf[32];
-                Gui::Duration(static_cast<int64_t>(p));
-               // Utils::FormatFrequency(static_cast<int64_t>(p), freqBuf, sizeof(freqBuf));
-              //  ImGui::Text("Harmonic: %d Frequency: %s", i + 1, freqBuf);
-                df /= 8;
-            }
+           // ImGui::Text("Octal Bin %lld", Utils::DecimaToOctal(floor(( (now - solarWin.past.unix_time) / d) * pow(8, 12))));
+            // for (int i = 0; i < 32; ++i) {
+            //    // ImGui::InputScalar("Delta",ImGuiDataType_Double, &d);
+            //
+            //     auto f = 1.0 / d;
+            //     char freqBuf[32];
+            //     Utils::FormatFrequency(static_cast<int64_t>(f), freqBuf, sizeof(freqBuf));
+            //     ImGui::Text("Harmonic: %d Frequency: %s", i + 1, freqBuf);
+            //     Gui::Duration(static_cast<int64_t>(d));
+            //     d /= 8;
+            //     ImGui::InputScalar("N", ImGuiDataType_Double, &f);
+            //
+            // }
+            // double df = 531187804423397.0;
+            // ImGui::InputScalar("Base", ImGuiDataType_Double, &df);
+            // for (int i = 0; i < 32; ++i) {
+            //     // ImGui::InputScalar("Delta",ImGuiDataType_Double, &d);
+            //
+            //     auto p = 1.0 / df;
+            //     char freqBuf[32];
+            //     Gui::Duration(static_cast<int64_t>(p));
+            //    // Utils::FormatFrequency(static_cast<int64_t>(p), freqBuf, sizeof(freqBuf));
+            //   //  ImGui::Text("Harmonic: %d Frequency: %s", i + 1, freqBuf);
+            //     df /= 8;
+            // }
             Gui::Timestamp(solarWin.future.unix_time, "Future");
         }
         else {
@@ -96,12 +94,11 @@ namespace Fractonica {
         Gui::Timestamp(lunarWin.past.unix_time, "Past");
         if (lunarWin.future.valid) {
             Gui::Timestamp(lunarWin.future.unix_time, "Future");
-            glyph.drawRange(now, solarWin.past.unix_time, solarWin.future.unix_time, &matrix);
+          //  glyph.drawRange(now, solarWin.past.unix_time, solarWin.future.unix_time, &matrix);
         }
         else {
             ImGui::Text("Ended");
         }
-        ImGui::End();
 
     }
 

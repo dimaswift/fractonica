@@ -6,6 +6,7 @@
 #include <string>
 
 #include "Utils.h"
+#include "saros.h"
 #define BITS 12
 
 static const char base64[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -58,7 +59,7 @@ uint64_t toOctal(uint64_t decimalNumber) {
     return octalNumber;
 }
 
-void Fractonica::Glyph::draw(int value, ImDrawList *draw_list, ImVec2 position, GlyphType type) const {
+void Fractonica::Glyph::draw(int64_t value, ImDrawList *draw_list, ImVec2 position, GlyphType type) const {
 
     char bin[13];
     bin[12] = '\0';
@@ -107,8 +108,8 @@ void Fractonica::Glyph::draw(int value, ImDrawList *draw_list, ImVec2 position, 
     ImGui::SetCursorScreenPos(ImVec2(position.x,position.y));
     ImGui::Dummy(ImVec2(size * 9, size * 9));
     if (ImGui::BeginItemTooltip()) {
-        ImGui::Text("d%d", value);
-        ImGui::Text("o%d", toOctal(value));
+        ImGui::Text("d%lld", value);
+        ImGui::Text("o%llu", toOctal(value));
         ImGui::Text("b%s", bin);
         ImGui::EndTooltip();
     }
@@ -117,19 +118,19 @@ void Fractonica::Glyph::draw(int value, ImDrawList *draw_list, ImVec2 position, 
     if (showLabels) {
 
         ImGui::SetCursorScreenPos(ImVec2(position.x + 4,position.y + 4));
-        ImGui::TextColored(color,"%04d", toOctal(value));
+        ImGui::TextColored(color,"%012llu", toOctal(value));
 
         ImGui::SetCursorScreenPos(ImVec2(position.x + size * 5 - 4 , position.y + 4));
-        ImGui::TextColored(color,"%04d", value);
+        ImGui::TextColored(color,"%012lld", value);
 
-        ImGui::SetCursorScreenPos(ImVec2(position.x + 4 , position.y + size * 6 + 2));
+        ImGui::SetCursorScreenPos(ImVec2(position.x + 4 , position.y + size * 7 + 8));
         ImGui::TextColored(color,"%X", value);
 
-        ImGui::SetCursorScreenPos(ImVec2(position.x + size * 7 - 4 , position.y + size * 6 + 2));
+        ImGui::SetCursorScreenPos(ImVec2(position.x + size * 8 - 12 , position.y + size * 7 + 8));
         ImGui::TextColored(color,"%c", base64[value % 64]);
     }
 
-    ImGui::SetCursorScreenPos(ImVec2(position.x,position.y + size * 9));
+   // ImGui::SetCursorScreenPos(ImVec2(position.x,position.y + size * 9));
 }
 
 
@@ -137,52 +138,47 @@ void Fractonica::Glyph::draw(int value, ImDrawList *draw_list, ImVec2 position, 
 void Fractonica::Glyph::render(double dt) {
 
     ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(1024, 1024), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(460, 200), ImGuiCond_Once);
+    char name[8];
+    sprintf(name, "%03d", saros);
+    ImGui::Begin(name, nullptr, ImGuiWindowFlags_NoScrollbar);
 
-    ImGui::Begin("Glyph");
+
+    if (showSettings) {
+        if (!ImGui::Begin("Settings", &showSettings, ImGuiWindowFlags_AlwaysAutoResize)) {
+            showSettings = false;
+        }
+        int type = (selectedType);
+        ImGui::RadioButton("Pixel", &type, 0); ImGui::SameLine();
+        ImGui::RadioButton("Line", &type, 1); ImGui::SameLine();
+        ImGui::RadioButton("Path", &type, 2); ImGui::SameLine();
+        ImGui::Checkbox("Show Labels", &showLabels);
+        ImGui::SliderInt("Page", &page, 0, 4096 / (rowSize * rowSize) - 1);
+        ImGui::SliderFloat("Size", &size, 2, 32);
+        ImGui::SliderFloat("Thickness", &thickness, 0.5, 8);
+        selectedType = static_cast<GlyphType>(type);
+        ImGui::End();
+    }
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-    time += dt;
+    auto now = std::time(nullptr);
 
-    if (time >= 0.1) {
-        time = 0;
-        current = current + 1;
-    }
-
-    static char testValue[5];
-
+    auto solarWin = find_solar_saros_window(now, saros);
+    auto period = solarWin.future.unix_time * 1000 - solarWin.past.unix_time * 1000;
+    auto left = solarWin.future.unix_time * 1000 - now * 1000;
+    auto sarosNormalized= static_cast<long double>(left) / static_cast<long double>(period);
+    auto sarosA = floor(4096 * (1.0 - sarosNormalized));
+    auto sarosB = floor(16777216 * (1.0 - sarosNormalized));
+    auto sarosC = floor(68719476736 * (1.0 - sarosNormalized));
     const ImVec2 c = ImGui::GetCursorScreenPos();
-    draw(current, draw_list, ImVec2(c.x, c.y), Pixel);
-    draw(current, draw_list, ImVec2(c.x + size * 8, c.y), Line);
-    draw(current, draw_list, ImVec2(c.x + size * 16, c.y), Path);
+    draw(sarosA, draw_list, ImVec2(c.x + size, c.y + size), selectedType);
+    draw(sarosB, draw_list, ImVec2(c.x + size * 10, c.y + size), selectedType);
+    draw(sarosC, draw_list, ImVec2(c.x + size * 19, c.y + size), selectedType);
 
-    ImGui::InputText("Octal", testValue, 5);
-    long value = strtol(testValue, nullptr, 8);
-    draw(value, draw_list, ImVec2(c.x, c.y + size * 9), Path);
-
-    ImGui::Dummy(ImVec2(size * 8, size * 8));
-    int type = (selectedType);
-    ImGui::RadioButton("Pixel", &type, 0); ImGui::SameLine();
-    ImGui::RadioButton("Line", &type, 1); ImGui::SameLine();
-    ImGui::RadioButton("Path", &type, 2); ImGui::SameLine();
-    ImGui::Checkbox("Show Labels", &showLabels);
-    selectedType = static_cast<GlyphType>(type);
-    ImGui::SliderInt("Page", &page, 0, 4096 / (rowSize * rowSize) - 1);
-    ImGui::SliderFloat("Size", &size, 2, 16);
-    ImGui::SliderFloat("Thickness", &thickness, 0.5, 8);
-
-    ImGui::Dummy(ImVec2(size, size));
-    const ImVec2 p = ImGui::GetCursorScreenPos();
-    const ImVec2 center = ImVec2(p.x, p.y);
-
-   // draw_list->AddRectFilled(ImVec2(center.x - size, center.y - size), ImVec2(center.x + size * rowSize * 9, center.y + size * rowSize * 9), ImColor(255, 255, 255));
-    for (int y = 0; y < rowSize; ++y) {
-        for (int x = 0; x < rowSize; ++x) {
-            int value = ((rowSize * rowSize) * page) + x * rowSize + y;
-            draw( value, draw_list, ImVec2(center.x + x * size * 9, center.y + y * size * 9), selectedType);
-
-        }
+    ImGui::Dummy(ImVec2(10, 80));
+    if (ImGui::Button("Settings")) {
+        showSettings = true;
     }
 
     ImGui::End();
