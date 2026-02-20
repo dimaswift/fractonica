@@ -5,6 +5,7 @@
 #ifndef FRACTONICA_UTILS_H
 #define FRACTONICA_UTILS_H
 #include <stdint.h>
+#include <stdio.h>
 
 namespace Fractonica {
 
@@ -19,7 +20,90 @@ namespace Fractonica {
         static uint32_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
         static DateTimeUTC UnixToUTC(int64_t unix_seconds);
         static size_t DurationToText(int64_t seconds, char *out, size_t out_sz);
+        static const char* FormatFrequency(int64_t freq_hz, char *buffer, size_t buffer_size);
+        static int64_t DecimaToOctal(int64_t decimalNumber);
     };
+
+    inline int64_t Utils::DecimaToOctal(int64_t decimalNumber) {
+        int64_t octalNumber = 0;
+        int64_t i = 1;
+        int64_t tempDecimal = decimalNumber;
+        while (tempDecimal != 0)
+        {
+            int64_t remainder = tempDecimal % 8;
+            octalNumber += remainder * i;
+            tempDecimal /= 8;
+            i *= 10;
+        }
+        return octalNumber;
+    }
+
+    inline const char* Utils::FormatFrequency(int64_t freq_hz, char *buffer, size_t buffer_size) {
+
+    if (buffer == nullptr || buffer_size < 32) {
+        return nullptr;
+    }
+
+    int64_t abs_freq = freq_hz < 0 ? -freq_hz : freq_hz;
+    const char *sign = freq_hz < 0 ? "-" : "";
+
+    static const struct {
+        int64_t threshold;
+        const char *suffix;
+        double divisor;
+    } units[] = {
+        { 1000000000000000LL, "PHz", 1e15 },  // 10^15 (petahertz)
+        { 1000000000000LL,    "THz", 1e12 },  // 10^12 (terahertz)
+        { 1000000000LL,       "GHz", 1e9  },  // 10^9  (gigahertz)
+        { 1000000LL,          "MHz", 1e6  },  // 10^6  (megahertz)
+        { 1000LL,             "kHz", 1e3  },  // 10^3  (kilohertz)
+        { 0,                  "Hz",  1.0  },  // Base unit
+    };
+
+    for (size_t i = 0; i < sizeof(units) / sizeof(units[0]); i++) {
+        if (abs_freq >= units[i].threshold) {
+            double value = (double)freq_hz / units[i].divisor;
+
+            if (abs_freq < units[i].threshold * 10) {
+
+                snprintf(buffer, buffer_size, "%s%.3f %s", sign, fabs(value), units[i].suffix);
+            } else if (abs_freq < units[i].threshold * 100) {
+
+                snprintf(buffer, buffer_size, "%s%.2f %s", sign, fabs(value), units[i].suffix);
+            } else if (abs_freq < units[i].threshold * 1000) {
+
+                snprintf(buffer, buffer_size, "%s%.1f %s", sign, fabs(value), units[i].suffix);
+            } else {
+
+                snprintf(buffer, buffer_size, "%s%.0f %s", sign, fabs(value), units[i].suffix);
+            }
+
+            char *dot = strchr(buffer, '.');
+            if (dot) {
+                char *end = buffer + strlen(buffer) - 1;
+                while (end > dot && *end != ' ') end--;
+                char *space = end;
+                end--;
+
+                while (end > dot && *end == '0') {
+                    end--;
+                }
+
+                if (end == dot) {
+                    end--;
+                }
+
+                end++;
+                memmove(end, space, strlen(space) + 1);
+            }
+
+            return buffer;
+        }
+    }
+
+    snprintf(buffer, buffer_size, "%s%lld Hz", sign, (long long)freq_hz);
+    return buffer;
+}
 
     inline uint32_t Utils::Color(uint8_t r, uint8_t g, uint8_t b) {
         return (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | static_cast<uint32_t>(b);
@@ -164,6 +248,7 @@ namespace Fractonica {
              (((((g * s1) >> 8) + s2) * v1) & 0xff00) |
              (((((b * s1) >> 8) + s2) * v1) >> 8);
     }
+
 }
 
 #endif //FRACTONICA_UTILS_H

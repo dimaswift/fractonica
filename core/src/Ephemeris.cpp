@@ -13,7 +13,7 @@ static inline int64_t read_int64_progmem(const int64_t *p)
 
 #elif defined(ESP_PLATFORM) || defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
 #include <pgmspace.h>
-#define READ_INT64(ptr) ((int64_t)pgm_read_qword((const void *)(ptr)))
+#define READ_INT64(ptr) ((int64_t)pgm_read_dword((const void *)(ptr)))
 
 #else
 #define READ_INT64(ptr) (*(const int64_t *)(ptr))

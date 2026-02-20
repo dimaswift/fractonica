@@ -3,7 +3,7 @@ add_definitions(-D${sokol_backend})
 
 fips_begin_app(main windowed)
 
-fips_files(main.cpp DesktopApp.cpp UnixClock.h UnixClock.cpp ImGuiDisplay.cpp ImGuiInput.h ComputeShader.h)
+fips_files(main.cpp DesktopApp.cpp UnixClock.h UnixClock.cpp ImGuiDisplay.cpp ImGuiInput.h ComputeShader.h glyph.h glyph.cpp)
 sokol_shader(shaders/mandelbrot.glsl ${slang})
 fips_deps(sokol imgui-docking)
 fips_deps(core)

@@ -5,6 +5,7 @@
 #include "imgui.h"
 #define SOKOL_IMGUI_IMPL
 #include "DesktopApp.h"
+#include "glyph.h"
 #include "sokol_imgui.h"
 #include "Mandelbrot.h"
 
@@ -15,6 +16,7 @@ struct AppState {
 
 static AppState state;
 static Fractonica::DesktopApp app;
+static Fractonica::Glyph glyph;
 
 static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
     (void)dl;
@@ -68,24 +70,26 @@ void frame() {
     frame_desc.dpi_scale = dpi_scale;
     simgui_new_frame(&frame_desc);
 
-    app.run();
-    ImGui::SetNextWindowPos(ImVec2(512, 80), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImVec2(state.mandelbrot.getWidth() + 10, state.mandelbrot.getHeight() + 140), ImGuiCond_Once);
+    glyph.render(delta_time);
 
-    if (ImGui::Begin("Mandelbrot Fractal")) {
-
-        state.mandelbrot.drawGui();
-
-        ImGui::Separator();
-
-        if (ImGui::BeginChild("Fractal View", ImVec2(state.mandelbrot.getWidth(), state.mandelbrot.getHeight()), true, ImGuiWindowFlags_None)) {
-            ImDrawList* dl = ImGui::GetWindowDrawList();
-            dl->AddCallback(draw_mandelbrot, nullptr);
-        }
-
-        ImGui::EndChild();
-    }
-    ImGui::End();
+    //app.run();
+    // ImGui::SetNextWindowPos(ImVec2(512, 80), ImGuiCond_Once);
+    // ImGui::SetNextWindowSize(ImVec2(state.mandelbrot.getWidth() + 10, state.mandelbrot.getHeight() + 140), ImGuiCond_Once);
+    //
+    // if (ImGui::Begin("Mandelbrot Fractal")) {
+    //
+    //     state.mandelbrot.drawGui();
+    //
+    //     ImGui::Separator();
+    //
+    //     if (ImGui::BeginChild("Fractal View", ImVec2(state.mandelbrot.getWidth(), state.mandelbrot.getHeight()), true, ImGuiWindowFlags_None)) {
+    //         ImDrawList* dl = ImGui::GetWindowDrawList();
+    //         dl->AddCallback(draw_mandelbrot, nullptr);
+    //     }
+    //
+    //     ImGui::EndChild();
+    // }
+    // ImGui::End();
 
 
     sg_pass render_pass{};
@@ -118,7 +122,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = cleanup,
         .event_cb = input,
         .width = 1200,
-        .height = 900,
+        .height = 1200,
         .window_title = "Fractonica",
         .logger.func = slog_func,
     };

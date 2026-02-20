@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(fractonica)
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(core)
@@ -62,7 +62,9 @@ else ()
              ${ROOT_DIR}/dcimgui/src/imgui_draw.cpp
              ${ROOT_DIR}/dcimgui/src/imgui_tables.cpp
              ${ROOT_DIR}/dcimgui/src/imgui_widgets.cpp
-             ${ROOT_DIR}/dcimgui/src/imgui.cpp)
+             ${ROOT_DIR}/dcimgui/src/imgui.cpp
+            src/DesktopApp.cpp
+            src/glyph.cpp)
 
     add_library(imgui-docking
              ${ROOT_DIR}/dcimgui/src-docking/cimgui.cpp
