@@ -6,6 +6,7 @@ add_library(core STATIC)
 target_sources(core PRIVATE
         src/App.cpp
         src/Base8HeptClock.cpp
+        src/OctalGlyph.cpp
         src/Ephemeris.cpp
         src/LunarClockApp.cpp
         src/LunarGlyph.cpp

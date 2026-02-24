@@ -2,7 +2,7 @@
 platform: emscripten
 generator: Ninja
 build_tool: vscode
-build_type: Debug
+build_type: Release
 cmake-toolchain: emscripten.toolchain.cmake
 vscode_exclude_from_workspace:
     - fips-glfw

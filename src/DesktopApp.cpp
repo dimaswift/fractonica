@@ -5,7 +5,7 @@
 #include "DesktopApp.h"
 #include "saros.h"
 #include "GuiUtils.h"
-
+#include "implot.h"
 
 namespace Fractonica {
 
@@ -34,6 +34,20 @@ namespace Fractonica {
 
         Gui::UnixDatePicker("Birthday", &year, &month, &day, &sarosLookup);
 
+        //
+        // static  int  bar_data[5] = {0,1,2,3,4};
+        // static float x_data[5] = {0,1,1,1,2};
+        // static float y_data[5] = {1,1,1,2,3};
+        //
+        // ImPlot::CreateContext() ;
+        // if (ImPlot::BeginPlot("My Plot")) {
+        //     ImPlot::PlotBars("My Bar Plot", bar_data, 5);
+        //     ImPlot::PlotLine("My Line Plot", x_data, y_data, 5);
+        //
+        //     ImPlot::EndPlot();
+        // }
+        //
+        // ImPlot::DestroyContext();
 
         //ImGui::Separator();
         //Gui::Timestamp(now, "Now");
@@ -52,7 +66,34 @@ namespace Fractonica {
         ImGui::TextColored(ImColor::HSV(0.15,1,1),"Solar %d", solar.eclipse.info.solar.saros_number);
         Gui::Timestamp(solarWin.past.unix_time, "Past Eclipse");
 
+        static bool showSettings = false;
+        static int saros = 141;
+        ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(460, 200), ImGuiCond_Once);
+        char name[8];
+        sprintf(name, "%03d", saros);
+        ImGui::Begin(name, nullptr, ImGuiWindowFlags_NoScrollbar);
 
+        static int64_t v = 07777;
+        ImGui::InputScalar("Value", ImGuiDataType_U64, &v);
+        // static GlyphSettings s;
+        // Glyph::Draw(v, s);
+        // Glyph::Draw(05555, s);
+
+        if (ImGui::Button("Settings")) {
+            showSettings = true;
+        }
+
+        if (showSettings) {
+            if (!ImGui::Begin("Glyph", &showSettings)) {
+                showSettings = false;
+            }
+
+           // Glyph::Edit(&s);
+            ImGui::End();
+        }
+
+        ImGui::End();
 
         if (solarWin.future.valid) {
            // auto d = static_cast<double>(solarWin.future.unix_time - solarWin.past.unix_time);

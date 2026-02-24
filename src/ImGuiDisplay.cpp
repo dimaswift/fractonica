@@ -1,5 +1,4 @@
 #include "ImGuiDisplay.h"
-#include <algorithm>
 #include <Utils.h>
 
 namespace Fractonica {
@@ -7,12 +6,11 @@ namespace Fractonica {
 ImGuiDisplay::ImGuiDisplay(uint16_t width,
                          uint16_t height,
                          float scale,
-                         LedShape shape,
+
                          const char* windowName)
     : width_(width),
       height_(height),
       scale_((scale < 1.0f) ? 1.0f : scale),
-      shape_(shape),
       windowName_(windowName ? windowName : "Matrix"),
       fb_(static_cast<size_t>(width) * static_cast<size_t>(height), 0u)
 {}
@@ -36,13 +34,51 @@ void ImGuiDisplay::log(const char *msg) {
 void ImGuiDisplay::logError(const char *msg) {
 }
 
-void ImGuiDisplay::drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) {
+void ImGuiDisplay::drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t thickness, uint32_t color) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), color, thickness);
 }
 
-void ImGuiDisplay::drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
+void ImGuiDisplay::drawLine(const Vector2 &p1, const Vector2 &p2, int16_t thickness, uint32_t color) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddLine(ImVec2(p1.x, p1.y), ImVec2(p2.x, p2.y), color, thickness);
+}
+
+void ImGuiDisplay::drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint32_t color) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), toImU32(color));
+}
+
+void ImGuiDisplay::drawFillRect(const Vector2 &min, const Vector2 &max, uint32_t color) {
+    drawRect(min.x, min.y, max.x - min.x, max.y - min.y, color);
+}
+
+void ImGuiDisplay::drawNGonFilled(const Vector2 &center, float radius, uint32_t color, int num_segments) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddNgonFilled(ImVec2(center.x, center.y), radius, color, num_segments);
+}
+
+void ImGuiDisplay::drawRect(const Vector2 &min, const Vector2 &max, uint32_t color) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddRect(ImVec2(min.x, min.y), ImVec2(max.x, max.y), toImU32(color));
 }
 
 void ImGuiDisplay::drawBitmap(int16_t x, int16_t y, uint16_t width, uint16_t height, const uint16_t *bitmap) {
+}
+
+void ImGuiDisplay::setCursor(const Vector2 &pos) {
+    ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y));
+}
+
+void ImGuiDisplay::printF(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    ImGui::TextV(fmt, args);
+    va_end(args);
+}
+
+void ImGuiDisplay::expand(int16_t w, int16_t h) {
+    ImGui::Dummy(ImVec2(w, h));
 }
 
 void ImGuiDisplay::update() {
@@ -80,60 +116,6 @@ void ImGuiDisplay::flush()
 {
     if (!begun_) return;
 
-   // ImGui::Begin(windowName_);
-
-    // Optional: controls inside the window
-    // ImGui::SliderFloat("Scale", &scale_, 2.0f, 40.0f, "%.1f");
-    // int shape = (shape_ == LedShape::Circle) ? 1 : 0;
-    // if (ImGui::RadioButton("Square", shape == 0)) shape = 0;
-    // ImGui::SameLine();
-    // if (ImGui::RadioButton("Circle", shape == 1)) shape = 1;
-    // shape_ = (shape == 1) ? LedShape::Circle : LedShape::Square;
-    //
-    const float s = scale_;
-
-    // Compute drawing area and create an invisible canvas
-    const ImVec2 canvas_size(width_ * s, height_ * s);
-    const ImVec2 p0 = ImGui::GetCursorScreenPos();
-
-    ImGui::InvisibleButton("matrix_canvas", canvas_size,
-                           ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
-
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-
-
-
-    // Background
-    dl->AddRectFilled(p0, ImVec2(p0.x + canvas_size.x, p0.y + canvas_size.y), IM_COL32(10, 10, 10, 255));
-
-
-    const float pad = std::max(0.0f, s * 0.10f);
-    const float r = std::max(1.0f, (s - 2.0f * pad) * 0.5f);
-
-    for (uint16_t y = 0; y < height_; ++y) {
-        for (uint16_t x = 0; x < width_; ++x) {
-            const uint32_t rgb = fb_[static_cast<size_t>(y) * width_ + x];
-            const ImU32 col = toImU32(rgb);
-
-            const float x0 = p0.x + x * s + pad;
-            const float y0 = p0.y + y * s + pad;
-            const float x1 = p0.x + (x + 1) * s - pad;
-            const float y1 = p0.y + (y + 1) * s - pad;
-
-            if (shape_ == LedShape::Square) {
-                dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), col, 0.0f);
-            } else {
-                const ImVec2 c((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
-                dl->AddCircleFilled(c, r, col, 16);
-            }
-
-        }
-    }
-
-    // Outline
-    dl->AddRect(p0, ImVec2(p0.x + canvas_size.x, p0.y + canvas_size.y), IM_COL32(80, 80, 80, 255));
-
-  //  ImGui::End();
 }
 
 void ImGuiDisplay::clear() {

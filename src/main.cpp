@@ -2,27 +2,42 @@
 #include "sokol_gfx.h"
 #include "sokol_glue.h"
 #include "sokol_log.h"
+#include "sokol_time.h"
 #include "imgui.h"
 #define SOKOL_IMGUI_IMPL
 #include "DesktopApp.h"
-#include "glyph.h"
 #include "sokol_imgui.h"
 //#include "Mandelbrot.h"
+#include "OctalGlyph.h"
+#include "saros.h"
+
+struct SarosState {
+    uint8_t number;
+    bool visible;
+    Fractonica::OctalGlyphSettings settings;
+    bool configure;
+    constexpr SarosState(uint8_t number, Fractonica::OctalGlyphSettings s) : number(number), visible(true), settings(s) {}
+    bool operator==(const SarosState& other) const {
+        return number == other.number;
+    }
+    bool operator!=(const SarosState& other) const {
+        return !(*this == other);
+    }
+};
 
 struct AppState {
     sg_pass_action pass_action = {};
    // Fractonica::Mandelbrot mandelbrot;
-    bool showSaros = false;
 };
 
+static Fractonica::OctalGlyphSettings settings;
 static AppState state;
 static Fractonica::DesktopApp app;
-
-static std::vector<Fractonica::Glyph> glyphs = {};
-
-// static Fractonica::Glyph glyph141(141);
-// static Fractonica::Glyph glyph128(128);
-// static Fractonica::Glyph glyph118(118);
+static Fractonica::ImGuiDisplay display(512, 512, 1, "Test");
+static std::vector sarosNumbers = {
+    SarosState(141, settings),
+    SarosState(128, settings),
+    SarosState(118, settings)};
 
 static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
     (void)dl;
@@ -40,9 +55,8 @@ static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
 
 void init() {
 
-    glyphs.emplace_back(141);
-
     app.setup();
+    stm_setup();
     sg_desc desc = {};
     desc.environment = sglue_environment();
     desc.logger.func = slog_func;
@@ -81,19 +95,15 @@ void frame() {
 
     if (ImGui::BeginMainMenuBar()) {
 
-        if (ImGui::BeginMenu("Options")) {
+        if (ImGui::BeginMenu("Saros")) {
 
-            if (ImGui::MenuItem("Saros Explorer")) {
-                state.showSaros = true;
-            }
-
-            if (ImGui::BeginMenu("Add Saros")) {
+            if (ImGui::BeginMenu("Add")) {
 
                 static int saros = 141;
                 ImGui::InputInt("Saros", &saros);
                 if (ImGui::Button("Add")) {
-
-                    glyphs.emplace_back(saros);
+                    if (std::find(sarosNumbers.begin(), sarosNumbers.end(), SarosState(saros, settings)) == sarosNumbers.end())
+                        sarosNumbers.emplace_back(saros, settings);
                 }
 
                 ImGui::EndMenu();
@@ -106,26 +116,62 @@ void frame() {
         ImGui::EndMainMenuBar();
     }
 
+    const auto now = std::chrono::system_clock::now();
+    const auto seconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+    ).count();
+    int x = 32;
 
-    for (auto& glyph : glyphs) {
-        glyph.render(delta_time);
-    }
+    for (size_t i = 0; i < sarosNumbers.size(); ++i) {
+        SarosState saros = sarosNumbers[i];
 
-    // app.run();
-    //ImGui::SetNextWindowPos(ImVec2(512, 80), ImGuiCond_Once);
-    //ImGui::SetNextWindowSize(ImVec2(state.mandelbrot.getWidth() + 10, state.mandelbrot.getHeight() + 140), ImGuiCond_Once);
-
-    if (state.showSaros) {
-        if (!ImGui::Begin("Saros Explorer", &state.showSaros)) {
-            state.showSaros = false;
+        if (saros.configure) {
+            ImGui::Begin("Settings", &saros.configure);
+            int type = (saros.settings.type);
+            ImGui::RadioButton("Pixel", &type, 0); ImGui::SameLine();
+            ImGui::RadioButton("Line", &type, 1); ImGui::SameLine();
+            ImGui::RadioButton("Path", &type, 2);
+            ImGui::Checkbox("Labels", &saros.settings.showLabels);ImGui::SameLine();
+            ImGui::Checkbox("Horizontal", &saros.settings.horizontal);ImGui::SameLine();
+            ImGui::Checkbox("Border", &saros.settings.showBorder);
+            ImGui::SliderFloat("Size", &saros.settings.size, 2, 32);
+            ImGui::SliderFloat("Thickness", &saros.settings.thickness, 0.5, 8);
+            constexpr int min = 1;
+            constexpr int max = 8;
+            ImGui::SliderScalar("Limit", ImGuiDataType_U8, &saros.settings.symbolLimit, &min, &max);
+            saros.settings.type = static_cast<Fractonica::OctalGlyphType>(type);
+            settings = saros.settings;
+            ImGui::End();
         }
 
-        app.run();
-        ImGui::End();
-    }
+        char name[8];
+        snprintf(name, sizeof(name), "%03d", saros.number);
+        ImGui::SetNextWindowPos(ImVec2(x, 32), ImGuiCond_Once);
+        x+=164;
+        ImGui::Begin(name, nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
+       const auto pos = ImGui::GetCursorScreenPos();
+       const auto v = calculate_solar_octal_phase_ms(seconds, saros.number, 12);
+       Fractonica::OctalGlyph::Draw(v, &display, Vector2(pos.x, pos.y ), saros.settings);
+        if (ImGui::BeginPopupContextItem(name))
+        {
+            if (ImGui::MenuItem("Settings")) {
+                saros.configure = true;
 
-
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", "Del")) {
+                sarosNumbers.erase(sarosNumbers.begin() + i);
+                --i;
+                ImGui::EndPopup();
+                ImGui::End();
+                break;
+            }
+            ImGui::EndPopup();
+        }
+       ImGui::End();
+       sarosNumbers[i] = saros;
+   }
 
     sg_pass render_pass{};
     render_pass.action = state.pass_action;

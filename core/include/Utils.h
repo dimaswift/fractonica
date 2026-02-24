@@ -6,7 +6,8 @@
 #define FRACTONICA_UTILS_H
 #include <stdint.h>
 #include <stdio.h>
-
+#include <math.h>
+#include <string.h>
 namespace Fractonica {
 
 

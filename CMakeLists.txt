@@ -64,7 +64,7 @@ else ()
              ${ROOT_DIR}/dcimgui/src/imgui_widgets.cpp
              ${ROOT_DIR}/dcimgui/src/imgui.cpp
             src/DesktopApp.cpp
-            src/glyph.cpp)
+    )
 
     add_library(imgui-docking
              ${ROOT_DIR}/dcimgui/src-docking/cimgui.cpp

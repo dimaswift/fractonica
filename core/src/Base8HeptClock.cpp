@@ -91,7 +91,7 @@ namespace Fractonica
         {
             const uint8_t next = (i + 1) % 7;
             display->drawLine(vLast[i].x, vLast[i].y,
-                              vLast[next].x, vLast[next].y,
+                              vLast[next].x, vLast[next].y, 1,
                               config.colorWhite);
         }
 
