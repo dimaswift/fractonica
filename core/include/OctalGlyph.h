@@ -21,8 +21,8 @@ namespace Fractonica {
         OctalGlyphType type = Path;
         uint8_t symbolLimit = 8;
         float size = 16;
-        float thickness = 2;
-        uint32_t color = 0xFFFFFFFF;
+        float thickness = 4;
+        uint32_t color = 0xFFFFFF;
     };
     class OctalGlyph {
     public:

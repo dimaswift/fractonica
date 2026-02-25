@@ -10,12 +10,8 @@ fips_files(
         UnixClock.cpp
         ImGuiDisplay.cpp
         ImGuiInput.h
-        ComputeShader.h
-        implot_internal.h
-        implot.h
-        implot_items.cpp
-        implot.cpp)
-sokol_shader(shaders/mandelbrot.glsl ${slang})
+        ComputeShader.h)
+#sokol_shader(shaders/mandelbrot.glsl ${slang})
 fips_deps(sokol imgui-docking)
 fips_deps(core)
 

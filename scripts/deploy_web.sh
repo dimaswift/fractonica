@@ -1,0 +1,1 @@
+rsync -avz --delete "../../fips-deploy/fractonica/web/html" root@fractonica.com:/var/www/fractonica.com/

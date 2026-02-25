@@ -22,14 +22,18 @@ if (FIPS_IMPORT)
     endif()
 
     fips_setup()
-
     set(HAS_COMPUTE_SHADERS ON)
     add_definitions(-DSOKOL_NO_DEPRECATED)
 
     if (FIPS_EMSCRIPTEN)
-        set(sokol_backend SOKOL_WGPU)
-        set(slang "wgsl")
-        fips_libs(webgpu_dawn)
+        set(sokol_backend SOKOL_GLES3)
+        set(slang "glsl300es")
+        set(HAS_COMPUTE_SHADERS OFF)
+
+        #set(sokol_backend SOKOL_WGPU)
+        #set(slang "wgsl")
+        #fips_libs(webgpu_dawn)
+        #fips_libs(webgpu_dawn)
     elseif (FIPS_ANDROID)
         set(sokol_backend SOKOL_GLES3)
         set(slang "glsl310es")

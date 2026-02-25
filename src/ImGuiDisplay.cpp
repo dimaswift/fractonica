@@ -36,12 +36,12 @@ void ImGuiDisplay::logError(const char *msg) {
 
 void ImGuiDisplay::drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t thickness, uint32_t color) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), color, thickness);
+    draw_list->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), toImU32(color), thickness);
 }
 
 void ImGuiDisplay::drawLine(const Vector2 &p1, const Vector2 &p2, int16_t thickness, uint32_t color) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddLine(ImVec2(p1.x, p1.y), ImVec2(p2.x, p2.y), color, thickness);
+    draw_list->AddLine(ImVec2(p1.x, p1.y), ImVec2(p2.x, p2.y), toImU32(color), thickness);
 }
 
 void ImGuiDisplay::drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint32_t color) {
@@ -50,12 +50,12 @@ void ImGuiDisplay::drawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint
 }
 
 void ImGuiDisplay::drawFillRect(const Vector2 &min, const Vector2 &max, uint32_t color) {
-    drawRect(min.x, min.y, max.x - min.x, max.y - min.y, color);
+    drawRect(min.x, min.y, max.x - min.x, max.y - min.y, toImU32(color));
 }
 
 void ImGuiDisplay::drawNGonFilled(const Vector2 &center, float radius, uint32_t color, int num_segments) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddNgonFilled(ImVec2(center.x, center.y), radius, color, num_segments);
+    draw_list->AddNgonFilled(ImVec2(center.x, center.y), radius, toImU32(color), num_segments);
 }
 
 void ImGuiDisplay::drawRect(const Vector2 &min, const Vector2 &max, uint32_t color) {
@@ -103,7 +103,7 @@ ImU32 ImGuiDisplay::toImU32(uint32_t rgb)
 void ImGuiDisplay::drawPixel(uint16_t x, uint16_t y, uint32_t color)
 {
     if (x >= width_ || y >= height_) return;
-    fb_[static_cast<size_t>(y) * width_ + x] = color;
+    fb_[static_cast<size_t>(y) * width_ + x] = toImU32(color);
 }
 
 bool ImGuiDisplay::begin()

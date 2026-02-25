@@ -35,9 +35,7 @@ static AppState state;
 static Fractonica::DesktopApp app;
 static Fractonica::ImGuiDisplay display(512, 512, 1, "Test");
 static std::vector sarosNumbers = {
-    SarosState(141, settings),
-    SarosState(128, settings),
-    SarosState(118, settings)};
+    SarosState(141, settings)};
 
 static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
     (void)dl;

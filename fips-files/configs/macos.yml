@@ -2,7 +2,7 @@
 platform: osx
 generator: Ninja
 build_tool: ninja
-build_type: Debug
+build_type: Release
 defines:
   SOKOL_USE_METAL: ON
   USE_CSPICE: ON
