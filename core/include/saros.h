@@ -180,6 +180,22 @@ typedef struct {
     uint8_t         saros_number;
 } saros_window_t;
 
+#define ALIVE_SAROS_COUNT 40
+#define OLDEST_SAROS 156
+#define YOUNGEST_SAROS 117
+
+const static uint8_t SarosIndexLookup[157] = {
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,1,2,3,4,6,10,8,9,14,7,5,12,11,13,15,16,17,18,19,20,
+    21,22,23,25,27,26,33,29,24,28,30,31,32,34,35,36,37,38,39
+};
+
+const static uint8_t SarosOrderedByBirth[ALIVE_SAROS_COUNT] = {
+    117,118,119,120,121,128,122,127,124,125,123,130,129,131,126,132,133,134,135,136,137,138,139,140,146,141,143,142,147,145,148,149,150,144,151,152,153,154,155,156
+};
+
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
 #ifdef __cplusplus
@@ -217,7 +233,9 @@ eclipse_result_t find_past_lunar_eclipse(int64_t timestamp);
 saros_window_t find_lunar_saros_window(int64_t timestamp, uint8_t saros_number);
 uint64_t calculate_solar_octal_phase(int64_t timestamp, uint8_t saros_number, uint8_t resolution);
 uint64_t calculate_solar_octal_phase_ms(int64_t timestamp, uint8_t saros_number, uint8_t resolution);
-
+uint64_t calculate_lunar_octal_phase(int64_t timestamp, uint8_t saros_number, uint8_t resolution);
+uint64_t calculate_lunar_octal_phase_ms(int64_t timestamp, uint8_t saros_number, uint8_t resolution);
+void get_solar_saros_series(uint8_t saros_number, int64_t times[SAROS_MAX_ECLIPSES], uint8_t *count);
 
 #ifdef __cplusplus
 }
@@ -230,7 +248,7 @@ uint64_t calculate_solar_octal_phase_ms(int64_t timestamp, uint8_t saros_number,
  *   Returns whichever of the next or past solar eclipse is nearer to ts.
  *   When equidistant, the future eclipse is returned.
  */
-static inline eclipse_result_t find_closest_solar_eclipse(int64_t timestamp)
+static eclipse_result_t find_closest_solar_eclipse(int64_t timestamp)
 {
     eclipse_result_t nxt = find_next_solar_eclipse(timestamp);
     eclipse_result_t pst = find_past_solar_eclipse(timestamp);
@@ -239,6 +257,16 @@ static inline eclipse_result_t find_closest_solar_eclipse(int64_t timestamp)
     int64_t d_nxt = nxt.eclipse.unix_time - timestamp;
     int64_t d_pst = timestamp - pst.eclipse.unix_time;
     return (d_pst < d_nxt) ? pst : nxt;
+}
+
+static int8_t get_alive_saros_index(const uint8_t number)
+{
+    for (uint8_t i = 0; i < ALIVE_SAROS_COUNT; i++) {
+        if (SarosOrderedByBirth[i] == number) {
+            return (int8_t) i;
+        }
+    }
+    return -1;
 }
 
 /**
@@ -288,6 +316,8 @@ static inline eclipse_result_t find_closest_lunar_eclipse(int64_t timestamp)
 #  define _SAROS_FIRST       ((uint8_t)ECLIPSE_MODERN_SAROS_FIRST)
 #  define _SAROS_LAST        ((uint8_t)ECLIPSE_MODERN_SAROS_LAST)
 #endif
+
+#define SAROS_COUNT _SAROS_COUNT
 
 /* ── Low-level PROGMEM / RAM accessors ─────────────────────────────────── */
 
@@ -468,30 +498,66 @@ static inline uint64_t map(const uint64_t input, const uint64_t in_min, const ui
     return  ((input - in_min) * (out_max - out_min) + (in_max - in_min) / 2) / (in_max - in_min) + out_min;
 }
 
-static const long double PowersOfEight[12] = {
-    8,64,512,4096,32768,262144,2097152,16777216,134217728,1073741824,8589934592,68719476736
+static const long double PowersOfEight[4] = {
+    4096,16777216,68719476736,281474976710656
 };
+
+void get_solar_saros_series(uint8_t saros_number, int64_t times[SAROS_MAX_ECLIPSES], uint8_t *count) {
+    uint16_t indices[SAROS_MAX_ECLIPSES];
+    uint8_t c = 0;
+    _saros_load_series(_SAROS_SAROS_ARR, saros_number, _SAROS_FIRST, &c, indices);
+    for (uint16_t i = 0; i < SAROS_MAX_ECLIPSES; i++) {
+        times[i] = _saros_read_time(_SAROS_TIMES_ARR, indices[i]);
+    }
+    *count = c;
+}
+
+static uint64_t get_bin(const uint64_t timestamp, const saros_window_t w, const uint16_t scale, const uint8_t resolution) {
+    const uint64_t elapsed = (timestamp - (w.past.unix_time * scale));
+    const uint64_t total = (w.future.unix_time - w.past.unix_time) * scale;
+    const long double n = (long double)elapsed / (long double)total;
+    return (uint64_t)floor(n * PowersOfEight[(resolution - 1) % 3]);
+}
+
+uint64_t calculate_lunar_octal_phase_ms(const int64_t timestamp, const uint8_t saros_number, const uint8_t resolution) {
+    saros_window_t w = find_lunar_saros_window(timestamp / 1000, saros_number);
+    return get_bin(timestamp, w, 1000, resolution);
+}
+
+int64_t get_solar_saros(int64_t index) {
+    return _saros_read_time(_SAROS_TIMES_ARR, index);
+}
+
+int16_t get_solar_saros_count() {
+    return _SAROS_COUNT;
+}
+
+uint8_t get_solar_saros_number(uint32_t index) {
+    return _SAROS_FIRST + index / SAROS_MAX_ECLIPSES;
+}
+
+uint64_t calculate_lunar_octal_phase(const int64_t timestamp, const uint8_t saros_number, const uint8_t resolution) {
+    saros_window_t w = find_lunar_saros_window(timestamp, saros_number);
+    if (!w.past.valid || !w.future.valid) {
+        return 0;
+    }
+    return get_bin(timestamp, w, 1, resolution);
+}
 
 uint64_t calculate_solar_octal_phase_ms(const int64_t timestamp, const uint8_t saros_number, const uint8_t resolution) {
     saros_window_t w = find_solar_saros_window(timestamp / 1000, saros_number);
-    if (!w.past.valid) {
+    if (!w.past.valid || !w.future.valid) {
         return 0;
     }
-    const uint64_t elapsed = (timestamp - w.past.unix_time * 1000);
-    const uint64_t total = (w.future.unix_time - w.past.unix_time) * 1000;
-    const long double n = (long double)elapsed / (long double)total;
-    return (uint64_t)floor(n * PowersOfEight[(resolution - 1) % 12]);
+    return get_bin(timestamp, w, 1000, resolution);
 }
 
 uint64_t calculate_solar_octal_phase(const int64_t timestamp, const uint8_t saros_number, const uint8_t resolution) {
     saros_window_t w = find_solar_saros_window(timestamp, saros_number);
-    if (!w.past.valid || timestamp < w.past.unix_time) {
+    if (!w.past.valid || !w.future.valid) {
         return 0;
     }
-    const uint64_t elapsed = (timestamp - w.past.unix_time);
-    const uint64_t total = (w.future.unix_time - w.past.unix_time);
-    const long double n = (long double)elapsed / (long double)total;
-    return (uint64_t)floor(n * PowersOfEight[(resolution - 1) % 12]);
+    return get_bin(timestamp, w, 1, resolution);
 }
 
 eclipse_result_t find_past_solar_eclipse(int64_t timestamp)

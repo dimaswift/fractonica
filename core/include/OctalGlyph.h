@@ -20,8 +20,8 @@ namespace Fractonica {
         bool showBorder = true;
         OctalGlyphType type = Path;
         uint8_t symbolLimit = 8;
-        float size = 16;
-        float thickness = 4;
+        float size = 8;
+        float thickness = 2;
         uint32_t color = 0xFFFFFF;
     };
     class OctalGlyph {

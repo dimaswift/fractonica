@@ -10,7 +10,7 @@ namespace Fractonica {
     class DesktopApp {
         LunarTime lunarTime;
         UnixClock unixClock;
-        ImGuiDisplay matrix;
+        ImGuiDisplay display;
 
         public:
         DesktopApp();

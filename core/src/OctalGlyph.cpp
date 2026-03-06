@@ -72,8 +72,9 @@ void Fractonica::OctalGlyph::Draw(const uint64_t &value, IDisplay *display, cons
         v >>= 12;
         size--;
     }
+
     const uint64_t originalValue = v;
-    while (v != 0) {
+    while (true) {
         const auto center = Vector2(p.x + settings.size * 3 + settings.size, p.y + settings.size * 4);
         drawDiamond(display, center, settings);
         drawn++;

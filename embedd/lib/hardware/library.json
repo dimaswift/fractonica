@@ -1,5 +1,6 @@
 {
   "name": "fractonica-hardware",
   "version": "0.0.1",
-  "build": { "srcDir": "src", "includeDir": "include" }
+  "build": { "srcDir": "src", "includeDir": "include" },
+  "frameworks": ["arduino"]
 }
