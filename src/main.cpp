@@ -8,12 +8,13 @@
 #include "DesktopApp.h"
 #include "sokol_imgui.h"
 //#include "Mandelbrot.h"
+#include "Audio.h"
 #include "OctalGlyph.h"
 #include "saros.h"
 #include "Synth.h"
 #include "Utils.h"
+#include "../core/include/ToneGenerator.h"
 
-#define TONE_COUNT 64
 
 struct SarosState {
     uint8_t number = 0;
@@ -42,14 +43,8 @@ struct AppState {
    // Fractonica::Mandelbrot mandelbrot;
 };
 
-struct Tone {
-    float freq;
-    float amp;
-    float phase;
-};
-
-static Tone tones[TONE_COUNT] = {};
-
+static Fractonica::ToneGenerator tone_generator(64, 44100);
+static Fractonica::Audio audio;
 static Fractonica::Synth synth;
 static Fractonica::OctalGlyphSettings settings;
 static AppState state;
@@ -71,16 +66,21 @@ static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
    // state.mandelbrot.draw();
 }
 
-static void updateWaveform() {
-    for (int i = 0; i < TONE_COUNT; ++i) {
-        tones[i].freq = sin(i * state.frequency) * state.amp;
-        tones[i].amp = 100 - i;
-        tones[i].phase = (float) i / TONE_COUNT * state.offset;
+
+void HandleAudio(float* buffer, int num_frames, int num_channels, void* user_data) {
+    for (int i = 0; i < num_frames; ++i) {
+        int16_t sample = synth.Sample();
+        for (int c = 0; c < num_channels; ++c) {
+            *buffer++ = (float) sample / 32767.0f;
+        }
     }
 }
 
+
+
 void init() {
 
+    audio.Initialize(HandleAudio);
     app.setup();
     stm_setup();
     sg_desc desc = {};
@@ -98,32 +98,23 @@ void init() {
     simgui_setup(&simgui_desc);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    synth.Initialize();
-
+    synth.SetSampleRate(audio.GetSampleRate());
 
     for (int i = 0; i < ALIVE_SAROS_COUNT; ++i) {
         sarosNumbers.emplace_back(SarosOrderedByBirth[i], settings);
     }
 
-    updateWaveform();
+    tone_generator.Randomize(state.frequency, state.amp);
    // state.mandelbrot.setup(512, 512);
 }
 
-void modulate(float time, float base_freq, float base_vol, float duration, float& out_freq, float& out_vol) {
-    float v = base_freq;
-    for (int i = 0; i < TONE_COUNT; ++i) {
-        Tone t = tones[i];
-        v += std::sin(time * t.freq + t.phase) * t.amp;
-    }
-    out_freq = v;
-    out_vol = base_vol * (0.5 - (time / duration));
-    if (out_vol < 0.0f) out_vol = 0.0f;
+
+void ModulateTone(uint32_t sample_counter, uint32_t base_phase_inc, int32_t base_vol, uint32_t duration_samples, int32_t & out_phase_inc, int32_t & out_vol) {
+    tone_generator.ModulateFast(sample_counter, base_phase_inc, base_vol, duration_samples, out_phase_inc, out_vol);
 }
 
 void frame() {
    // state.mandelbrot.compute();
-
-
 
     // ========================================
     // IMGUI UI
@@ -138,7 +129,6 @@ void frame() {
     frame_desc.height = height;
     frame_desc.delta_time = delta_time;
     frame_desc.dpi_scale = dpi_scale;
-
 
 
     const auto now = std::chrono::system_clock::now();
@@ -201,9 +191,10 @@ void frame() {
         }
 
         static float duration = 5.0f;
-        static float maxFreq = 3000.0f;
+        static uint32_t maxFreq = 3000;
         if (ImGui::Button("Play")) {
-            synth.PlayVoice(63, 0, 0.5f, duration, Fractonica::Synth::OscSine, modulate);
+
+            synth.PlayVoice(63, 0, 0.5f, duration, Fractonica::Synth::OscSine, ModulateTone);
         }
         ImGui::SameLine();
         if (ImGui::Button("Stop")) {
@@ -212,27 +203,30 @@ void frame() {
 
         bool changed = false;
         ImGui::SameLine();
+        uint32_t maxFreqBounds = 100000;
+        uint32_t zero = 0;
         ImGui::SliderFloat("Duration", &duration, 0.0f, 100.0f);
-        ImGui::SliderFloat("Max Freq", &maxFreq, 0.0f, 100000.0f);
+        ImGui::SliderScalarN("Frequency", ImGuiDataType_U32, &maxFreq, 1, &zero, &maxFreqBounds);
         changed |= ImGui::SliderFloat("Frequency", &state.frequency, 0.0f, 1000.0f);
         changed |= ImGui::SliderFloat("Amp", &state.amp, 0.0f, 500.0f);
         changed |= ImGui::SliderFloat("Offset", &state.offset, 0.0f, 500.0f);
 
-        if (changed) updateWaveform();
+        if (changed)   tone_generator.Randomize(state.frequency, state.amp);
 
         ImGui::Separator();
-        static constexpr int waveCount = 512;
+        static constexpr int waveCount = 1024;
         static float wave[waveCount] = {};
         static float phaseAcc = 0;
         phaseAcc+=delta_time;
         float min = 0;
         float max = 0;
+
         for (int i = 0; i < waveCount; ++i) {
             float v = 0;
 
-            for (int j = 0; j < TONE_COUNT; ++j) {
-                Tone t = tones[j];
-                v += std::sin(((float) i / waveCount) * t.freq + t.phase + phaseAcc) * t.amp;
+            for (int j = 0; j < tone_generator.GetCount(); ++j) {
+                Fractonica::Tone* t = tone_generator.Get(i);
+                v += std::sin(((float) i / waveCount) * t->phase_inc + t->phase_acc + phaseAcc) * t->amp;
             }
             wave[i] = v;
             if (v < min) min = v;
@@ -242,15 +236,16 @@ void frame() {
         ImGui::PlotLines("Form", wave, waveCount, 0, 0, min, max, ImVec2(512, 128));
 
         if (ImGui::BeginChild("##s")) {
-            for (int i = 0; i < TONE_COUNT; ++i) {
+            for (int i = 0; i < tone_generator.GetCount(); ++i) {
 
                 char n[8];
                 sprintf(n, "%d", i);
 
+                Fractonica::Tone* t = tone_generator.Get(i);
                 if (ImGui::TreeNode(n)) {
-                    ImGui::SliderFloat("Frequency", &tones[i].freq, 0, maxFreq);
-                    ImGui::SliderFloat("Amp", &tones[i].amp, 0, 100);
-                    ImGui::SliderFloat("Phase", &tones[i].phase, 0, Fractonica::Synth::PI * 2);
+                    ImGui::SliderScalarN("Frequency", ImGuiDataType_U32, &t->phase_inc, 1, &zero, &maxFreq);
+                    ImGui::SliderInt("Amp", &t->amp, 0, 100);
+                   // ImGui::SliderScalarN("Phase", ImGuiDataType_U32, &t->phase_acc, 0, M_PI * 2);
                     ImGui::TreePop();
                 }
             }
@@ -334,7 +329,8 @@ void frame() {
                 auto d0 = (sonifiedValue >> (3 * 0)) & 7;
                 saros.timer = 2.25 + (pow(2, zeroes));
                 if (state.enableSound) {
-                    synth.PlayVoice(i, notes[d0], 0.5f, saros.timer, Fractonica::Synth::OscSine, modulate);
+
+                    synth.PlayVoice(i, notes[d0], 0.5f, saros.timer, Fractonica::Synth::OscSine, ModulateTone);
                 }
             }
             saros.lastValue = sonifiedValue;
@@ -376,7 +372,6 @@ void cleanup() {
    // state.mandelbrot.shutdown();
     simgui_shutdown();
     sg_shutdown();
-
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
