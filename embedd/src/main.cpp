@@ -9,6 +9,9 @@
 #include "Synth.h"
 #include <math.h>
 
+#include "OV2640Camera.h"
+#include "SDMMCStorage.h"
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define SCL_PIN 47
@@ -30,6 +33,9 @@ Fractonica::OctalGlyphSettings glyph_settings;
 Fractonica::WifiClock wifiClock("RT-GPON-7", "857010486557");
 Fractonica::I2SAudio audio;
 Fractonica::Synth synth;
+Fractonica::OV2640Camera camera;
+Fractonica::FrameBuffer frameBuffer;
+Fractonica::SDMMCStorage storage;
 
 RotaryEncoder encoder(ENCODER_PIN_IN1, ENCODER_PIN_IN2, RotaryEncoder::LatchMode::TWO03);
 
@@ -69,7 +75,19 @@ bool readButtonPressedDebounced() {
     return false;
 }
 
+
+void logStatus(const char* msg, int delay_ = 0) {
+    display.clear();
+    display.print(msg, 0, 0, 1);
+    display.flush();
+    if (delay_ > 0) delay(delay_);
+}
+
+
 void setup() {
+
+
+
     Serial.begin(9600);
 
     delay(500);
@@ -93,12 +111,19 @@ void setup() {
 
     pinMode(PIN_BTN, INPUT_PULLUP);
     glyph_settings.showBorder = false;
+
+
+    if (!storage.begin()) {
+
+        logStatus("Storage failed", 1000);
+    }
+
+
 }
 
 void ModulateTone(uint32_t sample_counter, uint32_t base_phase_inc, int32_t base_vol, uint32_t duration_samples, int32_t & out_phase_inc, int32_t & out_vol) {
     tone_generator.ModulateFast(sample_counter, base_phase_inc, base_vol, duration_samples, out_phase_inc, out_vol);
 }
-
 
 void loop() {
     wifiClock.update();
@@ -134,6 +159,51 @@ void loop() {
     }
 
     if (readButtonPressedDebounced()) {
+        prevBin = 0;
+        display.clear();
         synth.PlayVoice(0, 500, 1, 3, Fractonica::Synth::OscSine, ModulateTone);
+        if (!camera.begin()) {
+            logStatus("Camera failed to initialize", 3000);
+
+        }
+        else {
+            logStatus("Camera ok", 1000);
+        }
+
+        while (!camera.isReady()) {
+            delay(10);
+        }
+
+        if (camera.captureFrame(&frameBuffer)) {
+
+            logStatus("Captured!", 1000);
+            if (storage.isReady()) {
+                bool saved = false;
+                File f = storage.openForWrite("/frame.jpg");
+                if (f) {
+                    auto written = f.write(frameBuffer.buffer, frameBuffer.length);
+                    f.close();
+                    saved = written == frameBuffer.length;
+                }
+
+                if (saved) {
+                    logStatus("Saved!", 1000);
+                }
+                else {
+                    logStatus("Saving failed", 1000);
+                }
+            }
+            else {
+                logStatus("Storage not ready...", 1000);
+            }
+
+        }
+        else {
+            logStatus("Failed to capture", 3000);
+        }
+
+
+        camera.end();
+
     }
 }
