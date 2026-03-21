@@ -23,6 +23,7 @@ namespace Fractonica {
         static size_t DurationToText(int64_t seconds, char *out, size_t out_sz);
         static const char* FormatFrequency(int64_t freq_hz, char *buffer, size_t buffer_size);
         static int64_t DecimaToOctal(int64_t decimalNumber);
+        static int64_t OctalToDecimal(int64_t octalNumber);
     };
 
     inline int64_t Utils::DecimaToOctal(int64_t decimalNumber) {
@@ -37,6 +38,18 @@ namespace Fractonica {
             i *= 10;
         }
         return octalNumber;
+    }
+
+    inline int64_t Utils::OctalToDecimal(int64_t octalNumber) {
+        int64_t decimalNumber = 0;
+        int64_t i = 0;
+        while (octalNumber != 0) {
+            int64_t digit = octalNumber % 10;
+            decimalNumber += digit * static_cast<int64_t>(pow(8, i));
+            octalNumber /= 10;
+            ++i;
+        }
+        return decimalNumber;
     }
 
     inline const char* Utils::FormatFrequency(int64_t freq_hz, char *buffer, size_t buffer_size) {

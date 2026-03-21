@@ -9,6 +9,7 @@
 #include "sokol_imgui.h"
 //#include "Mandelbrot.h"
 #include "Audio.h"
+#include "GuiUtils.h"
 #include "OctalGlyph.h"
 #include "saros.h"
 #include "Synth.h"
@@ -35,7 +36,7 @@ struct SarosState {
 struct AppState {
     sg_pass_action pass_action = {};
     bool showExplorer = false;
-    bool enableSound = true;
+    bool enableSound = false;
     bool showWaveformEditor = false;
     float frequency = 11;
     float offset = 76;
@@ -132,6 +133,7 @@ void frame() {
 
 
     const auto now = std::chrono::system_clock::now();
+
     const auto seconds = std::chrono::duration_cast<std::chrono::milliseconds>(
         now.time_since_epoch()
     ).count();
@@ -177,6 +179,10 @@ void frame() {
     if (state.showExplorer) {
         ImGui::SetNextWindowSize(ImVec2(512, 1024), ImGuiCond_Once);
         ImGui::Begin("Saros", &state.showExplorer);
+
+
+
+
 
         app.run();
 

@@ -236,6 +236,8 @@ uint64_t calculate_solar_octal_phase_ms(int64_t timestamp, uint8_t saros_number,
 uint64_t calculate_lunar_octal_phase(int64_t timestamp, uint8_t saros_number, uint8_t resolution);
 uint64_t calculate_lunar_octal_phase_ms(int64_t timestamp, uint8_t saros_number, uint8_t resolution);
 void get_solar_saros_series(uint8_t saros_number, int64_t times[SAROS_MAX_ECLIPSES], uint8_t *count);
+uint64_t get_solar_saros_period_duration_ms(int64_t timestamp, uint8_t saros_number, uint8_t period);
+uint64_t get_solar_rollover_epoch(int64_t timestamp, uint8_t saros_number, uint64_t bin);
 
 #ifdef __cplusplus
 }
@@ -328,6 +330,7 @@ static inline int64_t _saros_read_time(const uint8_t *arr, uint32_t idx)
     uint64_t hi = (uint64_t)ECLIPSE_READ_DWORD(p + 4u);
     return (int64_t)(lo | (hi << 32));
 }
+
 
 static inline void _saros_read_info_raw(const uint8_t *arr, uint32_t idx,
                                         uint8_t out[ECLIPSE_INFO_SIZE])
@@ -501,6 +504,26 @@ static inline uint64_t map(const uint64_t input, const uint64_t in_min, const ui
 static const long double PowersOfEight[4] = {
     4096,16777216,68719476736,281474976710656
 };
+
+
+uint64_t get_solar_saros_period_duration_ms(int64_t timestamp, uint8_t saros_number, uint8_t period) {
+    saros_window_t w = find_solar_saros_window(timestamp, saros_number);
+    if (!w.past.valid || !w.future.valid) {
+        return 0;
+    }
+    uint64_t duration = (w.future.unix_time - w.past.unix_time) * 1000;
+    return duration >> (3 * period);
+}
+
+uint64_t get_solar_rollover_epoch(int64_t timestamp, uint8_t saros_number, uint64_t bin) {
+    saros_window_t w = find_solar_saros_window(timestamp, saros_number);
+    if (!w.past.valid || !w.future.valid) {
+        return 0;
+    }
+    const uint64_t total = (w.future.unix_time - w.past.unix_time);
+    double fraction = (double) bin / 16777216.0;
+    return w.past.unix_time + total * fraction;
+}
 
 void get_solar_saros_series(uint8_t saros_number, int64_t times[SAROS_MAX_ECLIPSES], uint8_t *count) {
     uint16_t indices[SAROS_MAX_ECLIPSES];

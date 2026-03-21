@@ -9,6 +9,7 @@
 #include "imgui.h"
 #include "OctalGlyph.h"
 #include "Utils.h"
+#include "saros.h"
 
 namespace Fractonica {
     class Gui {
@@ -91,6 +92,8 @@ namespace Fractonica {
         Duration(seconds, out);
         ImGui::TextUnformatted(out);
     }
+
+
 
     static int64_t days_from_civil(int y, unsigned m, unsigned d) {
         y -= (m <= 2);
