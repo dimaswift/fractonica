@@ -81,7 +81,7 @@ namespace Fractonica {
 
         // Frame capture
         virtual bool captureFrame(FrameBuffer* frame) = 0;
-        virtual bool releaseFrame(FrameBuffer* frame) = 0;
+        virtual bool releaseFrame() = 0;
 
         // Configuration
         virtual bool setFrameSize(FrameSize size) = 0;

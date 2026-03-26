@@ -56,7 +56,7 @@
 
 #include "../include/Adafruit_SSD1306.h"
 #define SSD1306_NO_SPLASH
-#include <../include/Adafruit_GFX.h>
+#include "../include/Adafruit_GFX.h"
 
 // SOME DEFINES AND STATIC VARIABLES USED INTERNALLY -----------------------
 

@@ -183,6 +183,7 @@ typedef struct {
 #define ALIVE_SAROS_COUNT 40
 #define OLDEST_SAROS 156
 #define YOUNGEST_SAROS 117
+#define AVERAGE_SAROS_PERIOD_SECONDS 568971789
 
 const static uint8_t SarosIndexLookup[157] = {
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -238,6 +239,8 @@ uint64_t calculate_lunar_octal_phase_ms(int64_t timestamp, uint8_t saros_number,
 void get_solar_saros_series(uint8_t saros_number, int64_t times[SAROS_MAX_ECLIPSES], uint8_t *count);
 uint64_t get_solar_saros_period_duration_ms(int64_t timestamp, uint8_t saros_number, uint8_t period);
 uint64_t get_solar_rollover_epoch(int64_t timestamp, uint8_t saros_number, uint64_t bin);
+uint64_t get_average_rollover_epoch(int64_t reference, int64_t timestamp, uint64_t bin);
+uint64_t get_average_bin(int64_t reference, int64_t timestamp, uint16_t scale, uint8_t resolution);
 
 #ifdef __cplusplus
 }
@@ -523,6 +526,27 @@ uint64_t get_solar_rollover_epoch(int64_t timestamp, uint8_t saros_number, uint6
     const uint64_t total = (w.future.unix_time - w.past.unix_time);
     double fraction = (double) bin / 16777216.0;
     return w.past.unix_time + total * fraction;
+}
+
+uint64_t get_average_rollover_epoch(int64_t reference, int64_t timestamp, uint64_t bin) {
+    if (timestamp >= reference) return 0;
+    while (timestamp < reference) {
+        timestamp += AVERAGE_SAROS_PERIOD_SECONDS;
+    }
+    const uint64_t total = timestamp - reference;
+    double fraction = (double) bin / 16777216.0;
+    return (timestamp - AVERAGE_SAROS_PERIOD_SECONDS) + total * fraction;
+}
+
+uint64_t get_average_bin(int64_t reference, int64_t timestamp, uint16_t scale, const uint8_t resolution) {
+    if (timestamp >= reference) return 0;
+    while (timestamp < reference) {
+        timestamp += AVERAGE_SAROS_PERIOD_SECONDS;
+    }
+    const uint64_t elapsed = reference - (timestamp - AVERAGE_SAROS_PERIOD_SECONDS);
+    const uint64_t total = AVERAGE_SAROS_PERIOD_SECONDS * scale;
+    const long double n = (long double)elapsed / (long double)total;
+    return (uint64_t)floor(n * PowersOfEight[(resolution - 1) % 3]);
 }
 
 void get_solar_saros_series(uint8_t saros_number, int64_t times[SAROS_MAX_ECLIPSES], uint8_t *count) {

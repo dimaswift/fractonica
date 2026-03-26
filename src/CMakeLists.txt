@@ -15,8 +15,13 @@ fips_files(
         implot_items.cpp
         implot.h
         implot_internal.h
+        SolidExplorer.h
+        mesh.hpp
+        mesh_builder.hpp
 )
-#sokol_shader(shaders/mandelbrot.glsl ${slang})
+sokol_shader(shaders/mandelbrot.glsl ${slang})
+sokol_shader(shaders/instancing.glsl ${slang})
+
 fips_deps(sokol imgui-docking)
 fips_deps(core)
 

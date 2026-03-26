@@ -75,6 +75,11 @@ namespace Fractonica {
 
         Gui::UnixDatePicker("Birthday", &year, &month, &day, &hour, &birthday);
 
+        uint64_t averageBin = get_average_bin(referenceNow, birthday, 1, 2);
+        const ImVec2 pos = ImGui::GetCursorScreenPos();
+        static OctalGlyphSettings s;
+        OctalGlyph::Draw(averageBin, &display, Vector2(pos.x, pos.y), s);
+
         if (solar.eclipse.valid) {
 
             if (ImGui::TreeNode("Periods")) {

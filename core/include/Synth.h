@@ -28,7 +28,7 @@ namespace Fractonica {
     };
 
     class Synth {
-        static constexpr int NUM_VOICES = 64;
+        static constexpr int NUM_VOICES = 8;
         int sampleRate;
         VoiceContext m_voices[NUM_VOICES] = {};
 

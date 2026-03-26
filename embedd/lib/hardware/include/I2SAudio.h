@@ -4,7 +4,7 @@
 
 #ifndef EMBEDD_SYNTH_H
 #define EMBEDD_SYNTH_H
-
+#define CONFIG_I2S_SUPPRESS_DEPRECATE_WARN 1
 #include <Arduino.h>
 #include <driver/i2s.h>
 #include <freertos/FreeRTOS.h>
