@@ -13,7 +13,9 @@ namespace Fractonica {
         Pixel = 0,
         Line = 1,
         Path = 2
-      };
+    };
+
+
     struct OctalGlyphSettings {
         bool horizontal = false;
         bool showLabels = false;
@@ -24,9 +26,15 @@ namespace Fractonica {
         float thickness = 2;
         uint32_t color = 0xFFFFFF;
     };
+
     class OctalGlyph {
     public:
-        static void Draw(const uint64_t& value, IDisplay *display, const Vector2& point, const OctalGlyphSettings &settings);
+        static void Draw(const uint64_t &value, IDisplay *display, const Vector2 &point,
+                         const OctalGlyphSettings &settings);
+
+        static void Draw(const uint64_t &value, IMatrix *matrix, const Vector2 &point, uint16_t size, uint32_t color);
+
+
     };
 }
 

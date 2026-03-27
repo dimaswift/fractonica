@@ -24,6 +24,7 @@ namespace Fractonica {
         static const char* FormatFrequency(int64_t freq_hz, char *buffer, size_t buffer_size);
         static int64_t DecimaToOctal(int64_t decimalNumber);
         static int64_t OctalToDecimal(int64_t octalNumber);
+        static void FormatDuration(int64_t seconds, char *out);
     };
 
     inline int64_t Utils::DecimaToOctal(int64_t decimalNumber) {
@@ -50,6 +51,56 @@ namespace Fractonica {
             ++i;
         }
         return decimalNumber;
+    }
+
+
+    inline void Utils::FormatDuration(int64_t seconds, char *out) {
+        size_t out_sz = 128;
+        int neg = (seconds < 0);
+        uint64_t s = (seconds < 0) ? static_cast<uint64_t>(-(seconds + 1)) + 1u : static_cast<uint64_t>(seconds);
+
+        constexpr uint64_t SEC_MIN = 60;
+        constexpr uint64_t SEC_HOUR = 60 * SEC_MIN;
+        constexpr uint64_t SEC_DAY = 24 * SEC_HOUR;
+        constexpr uint64_t SEC_YEAR = 365 * SEC_DAY;
+
+        uint64_t years = s / SEC_YEAR;
+        s %= SEC_YEAR;
+        uint64_t days = s / SEC_DAY;
+        s %= SEC_DAY;
+        uint64_t hours = s / SEC_HOUR;
+        s %= SEC_HOUR;
+        uint64_t mins = s / SEC_MIN;
+        s %= SEC_MIN;
+        uint64_t secs = s;
+
+        size_t n = 0;
+        int wrote_any = 0;
+
+        if (neg) n += static_cast<size_t>(snprintf(out + n, (n < out_sz) ? out_sz - n : 0, "-"));
+
+#define APPEND_PART(val, singular, plural) do {                           \
+            if ((val) != 0) {                                                     \
+                n += (size_t)snprintf(out + n, (n < out_sz) ? out_sz - n : 0,     \
+                                      "%s%llu %s",                                \
+                                      wrote_any ? " " : "",                       \
+                                      (unsigned long long)(val),                  \
+                                      ((val) == 1) ? (singular) : (plural));      \
+                wrote_any = 1;                                                    \
+            }                                                                     \
+        } while (0)
+
+        APPEND_PART(years, "year", "years");
+        APPEND_PART(days, "day", "days");
+        APPEND_PART(hours, "hour", "hours");
+        APPEND_PART(mins, "min", "mins");
+        APPEND_PART(secs, "sec", "secs");
+
+#undef APPEND_PART
+
+        if (!wrote_any) {
+            n += static_cast<size_t>(snprintf(out + n, (n < out_sz) ? out_sz - n : 0, "0 secs"));
+        }
     }
 
     inline const char* Utils::FormatFrequency(int64_t freq_hz, char *buffer, size_t buffer_size) {

@@ -6,9 +6,21 @@
 
 namespace Fractonica {
 
+
     uint16_t WS2812Matrix::getPixelIndex(const uint16_t x, const uint16_t y) const {
-        const uint16_t physicalRow = height - 1 - y;
-        return (x * width) + physicalRow;
+
+        switch (origin) {
+            case TopLeft:
+                return x * width + (x % 2 == 0 ? height - 1 - y : y);
+            case TopRight:
+                return ((width - 1 - x) * width) + (x % 2 == 0 ? height - 1 - y : y);
+            case BottomLeft:
+                return x * width + (height - 1 - (x % 2 == 0 ? y : height - 1 - y));
+            case BottomRight:
+                return ((width - 1 - x) * width) + (height - 1 - (x % 2 != 0 ? y : height - 1 - y));
+            default:
+            return y * height + x;
+        }
     }
 
     void WS2812Matrix::drawPixel(uint16_t x, uint16_t y, uint32_t color) {

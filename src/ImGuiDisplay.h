@@ -13,6 +13,7 @@ namespace Fractonica {
         ImGuiDisplay(uint16_t width,
                     uint16_t height,
                     float scale = 10.0f,
+                    Origin origin = BottomLeft,
                     const char* windowName = "Matrix");
 
         // IMatrix
@@ -44,9 +45,12 @@ namespace Fractonica {
         uint16_t width_;
         uint16_t height_;
         float scale_;
+        Origin origin_;
         const char* windowName_;
-        std::vector<uint32_t> fb_; // row-major: y*width + x
+        std::vector<uint32_t> fb_;
         bool begun_ = false;
         static ImU32 toImU32(uint32_t rgb);
+
+        [[nodiscard]] size_t getPixelIndex(uint16_t x, uint16_t y) const;
     };
 } // namespace Fractonica

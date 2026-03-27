@@ -6,11 +6,12 @@ namespace Fractonica {
 ImGuiDisplay::ImGuiDisplay(uint16_t width,
                          uint16_t height,
                          float scale,
-
+                         Origin origin,
                          const char* windowName)
     : width_(width),
       height_(height),
       scale_((scale < 1.0f) ? 1.0f : scale),
+      origin_(origin),
       windowName_(windowName ? windowName : "Matrix"),
       fb_(static_cast<size_t>(width) * static_cast<size_t>(height), 0u)
 {}
@@ -100,10 +101,25 @@ ImU32 ImGuiDisplay::toImU32(uint32_t rgb)
     return IM_COL32(r, g, b, 255);
 }
 
+size_t ImGuiDisplay::getPixelIndex(uint16_t x, uint16_t y) const {
+    switch (origin_) {
+        case TopLeft:
+            return x * width_ + y;
+        case TopRight:
+            return ((width_ - 1 - x) * width_) + y;
+        case BottomLeft:
+            return x * width_ + (height_ - 1 - y);
+        case BottomRight:
+            return ((width_ - 1 - x) * width_) + (height_ - 1 - y);
+        default:
+            return y * width_ + x;
+    }
+}
+
 void ImGuiDisplay::drawPixel(uint16_t x, uint16_t y, uint32_t color)
 {
     if (x >= width_ || y >= height_) return;
-    fb_[static_cast<size_t>(y) * width_ + x] = toImU32(color);
+    fb_[x * height_ + y] = toImU32(color);
 }
 
 bool ImGuiDisplay::begin()
@@ -115,6 +131,19 @@ bool ImGuiDisplay::begin()
 void ImGuiDisplay::flush()
 {
     if (!begun_) return;
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+
+    for (size_t x = 0; x < width_; ++x) {
+        for (size_t y = 0; y < height_; ++y) {
+            draw_list->AddRectFilled(
+                ImVec2(pos.x + x * scale_, pos.y + y * scale_),
+                ImVec2(pos.x + (x + 1) * (scale_), pos.y + (y + 1) * scale_),
+                fb_[getPixelIndex(x,y)]);
+        }
+    }
 
 }
 

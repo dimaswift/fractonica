@@ -86,7 +86,7 @@ namespace Fractonica {
                 for (int i = 0; i < 14; ++i) {
                     uint64_t d = get_solar_saros_period_duration_ms(referenceNow, solar.saros_next.info.solar.saros_number, i);
                     if (d > 1000) {
-                        Gui::Duration((float)d / 1000.0f);
+                        Gui::Duration((double)d / 1000.0f);
 
                         const ImVec2 pos = ImGui::GetCursorScreenPos();
                         static OctalGlyphSettings s;
@@ -341,7 +341,7 @@ namespace Fractonica {
                 for (size_t j = 0; j < sarosCount; ++j) {
                     char lbl[16];
                     char dur[128];
-                    Gui::Duration(times[j] - prev, dur);
+                    Utils::FormatDuration(times[j] - prev, dur);
                     prev = times[j];
                     sprintf(lbl, "%d %lu",i + 110, j+1);
 

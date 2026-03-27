@@ -28,7 +28,6 @@ namespace Fractonica
         virtual void printF(const char* fmt, ...) = 0;
         virtual void update() = 0;
         virtual bool isOpen() = 0;
-        virtual Vector2 size() = 0;
     };
 }
 

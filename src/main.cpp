@@ -12,7 +12,6 @@
 #include "sokol_imgui.h"
 //#include "Mandelbrot.h"
 #include "Audio.h"
-#include "GuiUtils.h"
 #include "OctalGlyph.h"
 #include "saros.h"
 #include "SolidExplorer.h"
@@ -40,7 +39,7 @@ struct SarosState {
 struct AppState {
     sg_pass_action pass_action = {};
     bool showExplorer = false;
-    bool showSolidsExplorer = true;
+    bool showSolidsExplorer = false;
     bool enableSound = false;
     bool showWaveformEditor = false;
     float frequency = 11;
@@ -55,9 +54,10 @@ static Fractonica::Synth synth;
 static Fractonica::OctalGlyphSettings settings;
 static AppState state;
 static Fractonica::DesktopApp app;
-static Fractonica::ImGuiDisplay display(512, 512, 1, "Test");
+static Fractonica::ImGuiDisplay display(512, 512, 1,  Fractonica::IMatrix::TopLeft,"Test");
 static std::vector<SarosState> sarosNumbers = {};
 static Fractonica::SolidExplorer solid_explorer;
+static Fractonica::ImGuiDisplay matrix16(256, 256, 2, Fractonica::IMatrix::BottomLeft,"16x16 Matrix");
 
 static void draw_mandelbrot(const ImDrawList* dl, const ImDrawCmd* cmd) {
     (void)dl;
@@ -118,6 +118,7 @@ void init() {
    // state.mandelbrot.setup(512, 512);
 
     solid_explorer.init();
+    matrix16.begin();
 }
 
 
@@ -284,6 +285,23 @@ void frame() {
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
+    }
+    ImGui::SetNextWindowPos(ImVec2(32, 32), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(17 * 32, 17 * 32), ImGuiCond_Once);
+
+    if (ImGui::Begin("Matrix 16", nullptr)) {
+
+        matrix16.clear();
+        for (int16_t x = 0; x < 15; ++x) {
+            for (int16_t y = 0; y < 15; ++y) {
+                Vector2 p = Vector2(x - 7, y - 7);
+                int16_t d = sqrt((p.x * p.x) + (p.y * p.y));
+                Fractonica::OctalGlyph::Draw(d + frameCount / 6, &matrix16, Vector2(x * 17,y * 17), 16, 0xFFFFFF);
+            }
+        }
+
+        matrix16.flush();
+        ImGui::End();
     }
 
     if (state.showSolidsExplorer) {

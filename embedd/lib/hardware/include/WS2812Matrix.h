@@ -9,14 +9,13 @@ namespace Fractonica {
 
     class WS2812Matrix : public IMatrix {
 
-        Adafruit_NeoPixel strip;
-        uint16_t brightness, width, height;
-        uint16_t getPixelIndex(uint16_t x, uint16_t y) const;
-
     public:
-        WS2812Matrix(const uint8_t pin, const uint16_t brightness, const uint16_t width, const uint16_t height)
-        :
 
+
+
+        WS2812Matrix(const uint8_t pin, const uint16_t brightness, const uint16_t width, const uint16_t height, const Origin origin_ = BottomLeft)
+        :
+        origin(origin_),
         strip(width * height, pin, NEO_GRB + NEO_KHZ800) {
             this->brightness = brightness;
             this->width = width;
@@ -31,6 +30,14 @@ namespace Fractonica {
 
         void flush() override;
         void clear() override;
+        Vector2 size() override {
+            return Vector2(this->width, this->height);
+        }
+    private:
+        Adafruit_NeoPixel strip;
+        uint16_t brightness, width, height;
+        uint16_t getPixelIndex(uint16_t x, uint16_t y) const;
+        Origin origin;
     };
 }
 #define WS2812MATRIX_H
